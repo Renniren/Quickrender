@@ -131,6 +131,9 @@
     <ClInclude Include="headers\glm\vector_relational.hpp">
       <Filter>Header Files\glm</Filter>
     </ClInclude>
+    <ClInclude Include="headers\quickdefines.h">
+      <Filter>Header Files\Quickrender</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="headers\glm\CMakeLists.txt">

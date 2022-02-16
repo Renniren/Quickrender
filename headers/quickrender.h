@@ -2,9 +2,12 @@
 #define QUICKRENDER_MAIN_HEADER
 
 #pragma once
+#include <quickdefines.h>
+
 #include <glad.h>
 #include <string>
 #include <vector>
+#include <stdlib.h>
 #include <glfw3.h>
 #include <fstream>
 #include <glm.hpp>
@@ -33,7 +36,6 @@ const char* fragmentShaderSource = "#version 330 core\n"
 "{\n"
 "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
 "}\n\0";
-
 
 
 using namespace std;
@@ -211,6 +213,28 @@ public:
 		this->id = glCreateProgram();
 		for (int i = 0; i < shaders.size(); i++)
 		{
+#ifdef  QR_FORCE_COMPILE_SHADERS
+
+			if (shaders[i].id == 0)
+			{
+				shaders[i].CreateShader();
+				
+				switch (shaders[i].type)
+				{
+				case GL_VERTEX_SHADER:
+					shaders[i].LinkCode(vertexShaderSource);
+					break;
+
+				case GL_FRAGMENT_SHADER:
+					shaders[i].LinkCode(fragmentShaderSource);
+					break;
+				}
+
+				shaders[i].Compile();
+			}
+
+#endif 
+
 			glAttachShader(this->id, shaders[i].id);
 		}
 		glLinkProgram(this->id);
@@ -280,7 +304,7 @@ public:
 	
 	void Copy(GLenum buffer, void* data, int size, GLenum drawType)
 	{
-		this->data = data;
+		this->data = &data;
 		this->drawType = drawType;
 		this->buffer = buffer;
 		this->size = size;
@@ -339,6 +363,22 @@ void ApplyPerspective(Camera source, ShaderProgram pro, WorldObject obj)
 	pro.setMat4("model", obj.model);
 }
 
+class Renderer
+{
+private:
+	Renderer(){}
+
+public:
+	static vector<pair<BufferObject, GLenum>> Buffers;
+	static VertexArrayObject VertexArray;
+	static ShaderProgram Program;
+
+	static void Initialize();	
+	static void CopyToBuffer(void* data, int dataSize, GLenum buffer, GLenum usage);
+	static void BindBuffers();
+	static void Draw();
+};
+
 class Triangle : public WorldObject
 {
 public:
@@ -347,44 +387,83 @@ public:
 	Shader VertShader = Shader(vertexShaderSource, GL_VERTEX_SHADER), FragShader = Shader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 	ShaderProgram shaderProgram = ShaderProgram();
 
-	void Initialize()
+	void Initialize(int mode = 0)
 	{
-		VertShader.CreateShader();
-		VertShader.LinkCode(vertexShaderSource);
-		VertShader.Compile();
 
-		FragShader.CreateShader();
-		FragShader.LinkCode(fragmentShaderSource);
-		FragShader.Compile();
+		if (mode == 0)
+		{
+			VertShader.CreateShader();
+			VertShader.LinkCode(vertexShaderSource);
+			VertShader.Compile();
 
-		shaderProgram.InitializeProgram({ VertShader, FragShader });
+			FragShader.CreateShader();
+			FragShader.LinkCode(fragmentShaderSource);
+			FragShader.Compile();
 
-		float vertices[] = {
-		-0.5f, -0.5f, 0.0f, // left  
-		 0.5f, -0.5f, 0.0f, // right 
-		 0.0f,  0.5f, 0.0f,
-		0.0f,  0.5f, 0.5f,
+			shaderProgram.InitializeProgram({ VertShader, FragShader });
+
+			float vertices[] = {
+			-0.5f, -0.5f, 0.0f, // left  
+			 0.5f, -0.5f, 0.0f, // right 
+			 0.0f,  0.5f, 0.0f,
+			0.0f,  0.5f, 0.5f,
+			};
 
 
-		};
+			VAO->Generate(1);
+			VAO->Bind();
 
+			VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
+			VBO->Bind(GL_ARRAY_BUFFER);
+			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
-		VAO->Generate(1);
-		VAO->Bind();
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+			glEnableVertexAttribArray(0);
 
-		VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
-		VBO->Bind(GL_ARRAY_BUFFER);
-		VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
+		}
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
+		if (mode == 1)
+		{
+			float vertices[] = {
+			-0.5f, -0.5f, 0.0f, // left  
+			 0.5f, -0.5f, 0.0f, // right 
+			 0.0f,  0.5f, 0.0f,
+			0.0f,  0.5f, 0.5f,
+			};
+
+			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+			glEnableVertexAttribArray(0);
+		}
+
+		if (mode == 2)
+		{
+			float vertices[] = {
+			-0.5f, -0.5f, 0.0f, // left  
+			 0.5f, -0.5f, 0.0f, // right 
+			 0.0f,  0.5f, 0.0f,
+			0.0f,  0.5f, 0.5f,
+			};
+
+			Renderer::CopyToBuffer(vertices, sizeof(vertices), GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+			glEnableVertexAttribArray(0);
+		}
 	}
 
-	void Draw()
+	void Draw(int mode = 0)
 	{
-		VBO->Bind(GL_ARRAY_BUFFER);
-		shaderProgram.UseProgram();
-		VAO->Bind();
+		if (mode == 0)
+		{
+			VBO->Bind(GL_ARRAY_BUFFER);
+			shaderProgram.UseProgram();
+			VAO->Bind();
+		}
+
+		if (mode == 1)
+		{
+			Renderer::Draw();
+		}
 	}
 };
 

@@ -1,0 +1,8 @@
+#pragma once
+#ifndef QUICKRENDER_DEFINES
+#define QUICKRENDER_DEFINES
+
+//#define QR_FORCE_COMPILE_SHADERS
+
+
+#endif
