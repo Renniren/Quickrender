@@ -100,13 +100,6 @@ int main()
         }
 
 
-
-
-
-        //tri.euler.z += 0.05f;
-        //tri.euler.x += 0.05f;
-        //tri.euler.y += 0.05f;
-
         cam.view = lookAt(cam.position, tri.position, vec3(0, 1, 0));
 
         tri.Draw();
