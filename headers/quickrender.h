@@ -42,6 +42,48 @@ using namespace glm;
 
 int width = 800, height = 600;
 
+void ViewResizeCallback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+}
+
+GLFWwindow* Setup()
+{
+	// glfw: initialize and configure
+   // ------------------------------
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+
+	// glfw window creation
+	// --------------------
+	GLFWwindow* window = glfwCreateWindow(width, height, "LearnOpenGL", NULL, NULL);
+	if (window == NULL)
+	{
+		std::cout << "Failed to create GLFW window" << std::endl;
+		glfwTerminate();
+		return nullptr;
+	}
+
+	glfwMakeContextCurrent(window);
+
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		return nullptr;
+	}
+
+	glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
+	glViewport(0, 0, width, height);
+
+	return window;
+}
+
 class GLObject
 {
 	
@@ -62,6 +104,8 @@ public:
 	{
 
 	}
+
+	GLObject* globj = this;
 };
 
 class WorldObject 
@@ -74,7 +118,6 @@ public:
 
 	mat4 model = mat4(1.0f);
 	
-	WorldObject* wobj = this;
 
 	void UpdateMatrices()
 	{
@@ -85,6 +128,8 @@ public:
 		model = rotate(model, euler.y, vec3(0, 1, 0));
 		model = rotate(model, euler.z, vec3(0, 0, 1));
 	}
+
+	WorldObject* wobj = this;
 };
 
 class Shader : public GLObject
@@ -218,14 +263,14 @@ public:
 		buffer = 0;
 		drawType = 0;
 		size = 0;
-		data = 0;
+		data = nullptr;
 	}
 
 	void Generate(int size, GLenum buffer) 
 	{
 		this->size = size;
 		this->buffer = buffer;
-		glGenBuffers(size, &id);
+		glGenBuffers(size, &this->id);
 	}
 
 	void Bind(GLenum toWhat)
