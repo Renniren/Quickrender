@@ -280,7 +280,7 @@ public:
 	GLenum drawType = 0;
 
 	int size = 0;
-	void* data = 0;
+	void* data = nullptr;
 
 	BufferObject()
 	{
@@ -376,7 +376,7 @@ public:
 	static void Initialize();	
 	static void CopyToBuffer(void* data, int dataSize, GLenum buffer, GLenum usage);
 	static void BindBuffers();
-	static void Draw();
+	static void Draw(VertexArrayObject va, ShaderProgram pro);
 };
 
 class Triangle : public WorldObject
@@ -462,7 +462,7 @@ public:
 
 		if (mode == 1)
 		{
-			Renderer::Draw();
+			Renderer::Draw(*VAO, shaderProgram);
 		}
 	}
 };

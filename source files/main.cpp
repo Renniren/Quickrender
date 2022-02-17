@@ -30,13 +30,15 @@ void Renderer::BindBuffers()
     }
 }
 
-void Renderer::Draw()
+void Renderer::Draw(VertexArrayObject va, ShaderProgram pro)
 {
-    BindBuffers();
-    Program.UseProgram();
-    VertexArray.Bind();
+    va.Bind();
+    pro.UseProgram();
 
-    glCall(glDrawArrays(GL_TRIANGLES, 0, 4096));
+    glDrawArrays(GL_TRIANGLES, 0, 4096);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
 }
 
 void Renderer::Initialize()
@@ -138,10 +140,10 @@ int main()
         //can't see anything unless this line is included, I find this to be strange
         cam.view = lookAt(cam.position, tri.position, vec3(0, 1, 0));
         //cam.UpdateCameraMatrices();
-        tri.Draw();
+        tri.Draw(1);
         ApplyPerspective(*Camera::main, tri.shaderProgram, (WorldObject)tri);
 
-        glCall(glDrawArrays(GL_TRIANGLES, 0, 4096));
+        //glCall(glDrawArrays(GL_TRIANGLES, 0, 4096));
         PrintErrors();
         glfwSwapBuffers(window);
         glfwPollEvents();
