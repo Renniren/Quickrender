@@ -30,18 +30,17 @@ void Renderer::BindBuffers()
     }
 }
 
+
+
 void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo)
 {
+    va.Bind();
     bo.Bind(bo.buffer);
     pro.UseProgram();
-    va.Bind();
 
     glDrawArrays(GL_TRIANGLES, 0, 4096);
 
-
-    glBindBuffer(bo.buffer, 0);
-    glUseProgram(0);
-    glBindVertexArray(0);
+    ResetState();
 }
 
 void Renderer::Initialize()
@@ -85,13 +84,13 @@ int main()
     cam.NearClip = 0.01f;
 
     tri.Initialize(0);
-    tri.position = vec3(0, 0, 0);
-    tri.scale = vec3(1, 1, 6);
+    tri.position = vec3(0, 1, 0);
+    tri.scale = vec3(18, 18, 18);
     cam.position = vec3(0, 0, 5);
     
     tri2.Initialize(0);
-    tri2.scale = vec3(9, 9, 9);
-    tri2.euler = vec3(90, 0, 0);
+    tri2.scale = vec3(1, 1, 9);
+    tri2.euler = vec3(0, 0, 0);
     tri2.position = vec3(0, -1, 0);
     
 
@@ -131,20 +130,24 @@ int main()
 
         if (glfwGetKey(window, GLFW_KEY_E))
         {
-            cam.euler.z -= speed * deltaTime;
+            cam.position.y -= speed * deltaTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_Q))
         {
-            cam.euler.z += speed * deltaTime;
+            cam.position.y += speed * deltaTime;
         }
 
 
         //can't see anything unless this line is included, I find this to be strange
-        cam.view = lookAt(cam.position, tri.position, vec3(0, 1, 0));
+        cam.view = lookAt(cam.position, tri2.position, vec3(0, 1, 0));
         //cam.UpdateCameraMatrices();
-        tri.Draw(1);
-        tri2.Draw(1);
+        
+        Renderer::Draw(*tri2.VAO, tri2.shaderProgram, *tri2.VBO);
+        Renderer::Draw(*tri.VAO, tri.shaderProgram, *tri.VBO);
+
+        //tri.Draw(1);
+        //tri2.Draw(1);
         ApplyPerspective(*Camera::main, tri.shaderProgram, (WorldObject)tri);
 
         //glCall(glDrawArrays(GL_TRIANGLES, 0, 4096));

@@ -44,6 +44,13 @@ using namespace glm;
 
 int width = 800, height = 600;
 
+void ResetState()
+{
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glUseProgram(0);
+	glBindVertexArray(0);
+}
+
 void ViewResizeCallback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
@@ -119,16 +126,19 @@ public:
 	vec3 scale = zerovec;
 
 	mat4 model = mat4(1.0f);
+
+	vec3 forward = zerovec	, right = zerovec, up = zerovec;
 	
 
 	void UpdateMatrices()
 	{
 		model = translate(model, -position);
-		model = glm::scale(model, scale);
 
 		model = rotate(model, euler.x, vec3(1, 0, 0));
 		model = rotate(model, euler.y, vec3(0, 1, 0));
 		model = rotate(model, euler.z, vec3(0, 0, 1));
+		
+		model = glm::scale(model, scale);
 	}
 
 	WorldObject* wobj = this;
@@ -213,28 +223,6 @@ public:
 		this->id = glCreateProgram();
 		for (int i = 0; i < shaders.size(); i++)
 		{
-#ifdef  QR_FORCE_COMPILE_SHADERS
-
-			if (shaders[i].id == 0)
-			{
-				shaders[i].CreateShader();
-				
-				switch (shaders[i].type)
-				{
-				case GL_VERTEX_SHADER:
-					shaders[i].LinkCode(vertexShaderSource);
-					break;
-
-				case GL_FRAGMENT_SHADER:
-					shaders[i].LinkCode(fragmentShaderSource);
-					break;
-				}
-
-				shaders[i].Compile();
-			}
-
-#endif 
-
 			glAttachShader(this->id, shaders[i].id);
 		}
 		glLinkProgram(this->id);
@@ -392,6 +380,7 @@ public:
 
 		if (mode == 0)
 		{
+			ResetState();
 			VertShader.CreateShader();
 			VertShader.LinkCode(vertexShaderSource);
 			VertShader.Compile();
@@ -420,24 +409,12 @@ public:
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 			glEnableVertexAttribArray(0);
 
-		}
-
-		if (mode == 1)
-		{
-			float vertices[] = {
-			-0.5f, -0.5f, 0.0f, // left  
-			 0.5f, -0.5f, 0.0f, // right 
-			 0.0f,  0.5f, 0.0f,
-			0.0f,  0.5f, 0.5f,
-			};
-
-			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-			glEnableVertexAttribArray(0);
+			ResetState();
 		}
 
 		if (mode == 2)
 		{
+			ResetState();
 			float vertices[] = {
 			-0.5f, -0.5f, 0.0f, // left  
 			 0.5f, -0.5f, 0.0f, // right 
@@ -445,9 +422,27 @@ public:
 			0.0f,  0.5f, 0.5f,
 			};
 
-			Renderer::CopyToBuffer(vertices, sizeof(vertices), GL_ARRAY_BUFFER, GL_STATIC_DRAW);
+			VertShader.CreateShader();
+			VertShader.LinkCode(vertexShaderSource);
+			VertShader.Compile();
+
+			FragShader.CreateShader();
+			FragShader.LinkCode(fragmentShaderSource);
+			FragShader.Compile();
+
+			shaderProgram.InitializeProgram({ VertShader, FragShader });
+
+			VAO->Generate(1);
+			VAO->Bind();
+
+			VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
+			VBO->Bind(GL_ARRAY_BUFFER);
+			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
+
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 			glEnableVertexAttribArray(0);
+
+			ResetState();
 		}
 	}
 
