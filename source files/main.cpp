@@ -30,15 +30,18 @@ void Renderer::BindBuffers()
     }
 }
 
-void Renderer::Draw(VertexArrayObject va, ShaderProgram pro)
+void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo)
 {
-    va.Bind();
+    bo.Bind(bo.buffer);
     pro.UseProgram();
+    va.Bind();
 
     glDrawArrays(GL_TRIANGLES, 0, 4096);
 
-    glBindVertexArray(0);
+
+    glBindBuffer(bo.buffer, 0);
     glUseProgram(0);
+    glBindVertexArray(0);
 }
 
 void Renderer::Initialize()
@@ -75,7 +78,7 @@ int main()
     //setting the scene, making a camera and a triangle
     Camera cam = Camera(Camera::projectionMode::Perspective, true);
     Triangle tri = Triangle();
-    //Triangle tri2 = Triangle();
+    Triangle tri2 = Triangle();
 
     cam.FieldOfView = 90;
     cam.FarClip = 9000.0f;
@@ -83,14 +86,14 @@ int main()
 
     tri.Initialize(0);
     tri.position = vec3(0, 0, 0);
-    tri.scale = vec3(1, 1, 1);
+    tri.scale = vec3(1, 1, 6);
     cam.position = vec3(0, 0, 5);
-    /*
-    tri.Initialize(2);
-    tri.scale = vec3(9, 9, 9);
-    tri.euler = vec3(90, 0, 0);
-    tri.position = vec3(0, -10, 0);
-    */
+    
+    tri2.Initialize(0);
+    tri2.scale = vec3(9, 9, 9);
+    tri2.euler = vec3(90, 0, 0);
+    tri2.position = vec3(0, -1, 0);
+    
 
     //enabling special shit for rendering, only depth testing is needed for now
     glEnable(GL_DEPTH_TEST);
@@ -141,6 +144,7 @@ int main()
         cam.view = lookAt(cam.position, tri.position, vec3(0, 1, 0));
         //cam.UpdateCameraMatrices();
         tri.Draw(1);
+        tri2.Draw(1);
         ApplyPerspective(*Camera::main, tri.shaderProgram, (WorldObject)tri);
 
         //glCall(glDrawArrays(GL_TRIANGLES, 0, 4096));
@@ -149,8 +153,8 @@ int main()
         glfwPollEvents();
     }
 
-    glfwTerminate();
     return 0;
+    glfwTerminate();
 
     //cum
 
