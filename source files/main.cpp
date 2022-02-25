@@ -10,31 +10,7 @@ float deltaTime = 0, lastFrame = 0;
 Camera* Camera::main = nullptr;
 GLFWwindow* window;
 
-vector<pair<BufferObject, GLenum>> Renderer::Buffers = vector<pair<BufferObject, GLenum>>();
-ShaderProgram Renderer::Program = ShaderProgram();
-VertexArrayObject Renderer::VertexArray = VertexArrayObject();
 vector<GLObject> GLObject::objects = vector<GLObject>();
-
-void Renderer::CopyToBuffer(void* data, int dataSize, GLenum buffer, GLenum usage)
-{
-    for (int i = 0; i < Buffers.size(); i++)         
-    {
-        if (Buffers[i].second == buffer)
-        {
-            if(Buffers[i].first.id == 0)Buffers[i].first.Generate(dataSize, buffer);
-            Buffers[i].first.Copy(buffer, data, dataSize, usage);
-        }
-    }
-}
-
-void Renderer::BindBuffers()
-{
-    for (int i = 0; i < Buffers.size(); i++)
-    {
-        Buffers[i].first.Bind(Buffers[i].first.buffer);
-    }
-}
-
 
 
 void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
@@ -48,31 +24,6 @@ void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, Wo
     ApplyPerspective(*Camera::main, pro, wo);
     ResetState();
 }
-
-void Renderer::Initialize()
-{
-    Buffers.push_back(pair<BufferObject, GLenum>(BufferObject(), GL_ARRAY_BUFFER));
-    Buffers.push_back(pair<BufferObject, GLenum>(BufferObject(), GL_ELEMENT_ARRAY_BUFFER));
-    VertexArray = VertexArrayObject();
-    VertexArray.Generate(1);
-
-    Shader VertShader = Shader(vertexShaderSource, GL_VERTEX_SHADER), FragShader = Shader(fragmentShaderSource, GL_FRAGMENT_SHADER);
-
-    VertShader.CreateShader();
-    VertShader.LinkCode(vertexShaderSource);
-    VertShader.Compile();
-
-    FragShader.CreateShader();
-    FragShader.LinkCode(fragmentShaderSource);
-    FragShader.Compile();
-
-    Program.InitializeProgram({ VertShader, FragShader });
-
-}
-
-
-
-
 
 int main()
 {

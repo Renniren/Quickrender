@@ -386,13 +386,6 @@ private:
 	Renderer(){}
 
 public:
-	static vector<pair<BufferObject, GLenum>> Buffers;
-	static VertexArrayObject VertexArray;
-	static ShaderProgram Program;
-
-	static void Initialize();	
-	static void CopyToBuffer(void* data, int dataSize, GLenum buffer, GLenum usage);
-	static void BindBuffers();
 	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo);
 };
 
