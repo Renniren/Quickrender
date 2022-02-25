@@ -1,14 +1,19 @@
+#define _CRTDBG_MAP_ALLOC
 #include <quickrender.h>
+#include <stdlib.h>
+#include <crtdbg.h>
 using namespace std;
 
 
 //declarations
+float deltaTime = 0, lastFrame = 0;
 Camera* Camera::main = nullptr;
 GLFWwindow* window;
 
 vector<pair<BufferObject, GLenum>> Renderer::Buffers = vector<pair<BufferObject, GLenum>>();
 ShaderProgram Renderer::Program = ShaderProgram();
 VertexArrayObject Renderer::VertexArray = VertexArrayObject();
+vector<GLObject> GLObject::objects = vector<GLObject>();
 
 void Renderer::CopyToBuffer(void* data, int dataSize, GLenum buffer, GLenum usage)
 {
@@ -32,14 +37,15 @@ void Renderer::BindBuffers()
 
 
 
-void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo)
+void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
 {
     va.Bind();
     bo.Bind(bo.buffer);
     pro.UseProgram();
 
-    glDrawArrays(GL_TRIANGLES, 0, 4096);
+    glDrawArrays(GL_TRIANGLES, 0, bo.size);
 
+    ApplyPerspective(*Camera::main, pro, wo);
     ResetState();
 }
 
@@ -65,36 +71,54 @@ void Renderer::Initialize()
 }
 
 
-float deltaTime = 0, lastFrame = 0;
 
 
 
 int main()
 {
-    window = Setup();
-    Renderer::Initialize();
-    
-    //setting the scene, making a camera and a triangle
+    MSetupMemoryChecks();
+
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    GLFWwindow* window = glfwCreateWindow(width, height, "LearnOpenGL", NULL, NULL);
+    if (window == NULL)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);
+    gladLoadGL();
+
+
+    glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
+    glViewport(0, 0, width, height);
+
     Camera cam = Camera(Camera::projectionMode::Perspective, true);
     Triangle tri = Triangle();
-    Triangle tri2 = Triangle();
+    Cube tri2 = Cube();
 
     cam.FieldOfView = 90;
     cam.FarClip = 9000.0f;
     cam.NearClip = 0.01f;
 
+    cam.position = vec3(0, -3, 0);
+
     tri.Initialize(0);
+    tri.euler = vec3(90, 0, 0);
     tri.position = vec3(0, 1, 0);
-    tri.scale = vec3(18, 18, 18);
+    tri.scale = vec3(1, 1, 1);
     cam.position = vec3(0, 0, 5);
     
     tri2.Initialize(0);
-    tri2.scale = vec3(1, 1, 9);
-    tri2.euler = vec3(0, 0, 0);
-    tri2.position = vec3(0, -1, 0);
-    
+    tri2.position = vec3(0, 3, 0);
+    tri2.scale = onevec;
+    tri2.euler = vec3(90, 0, 0);
 
-    //enabling special shit for rendering, only depth testing is needed for now
     glEnable(GL_DEPTH_TEST);
 
     float speed = 0.9f;
@@ -138,35 +162,15 @@ int main()
             cam.position.y += speed * deltaTime;
         }
 
-
-        //can't see anything unless this line is included, I find this to be strange
-        cam.view = lookAt(cam.position, tri2.position, vec3(0, 1, 0));
-        //cam.UpdateCameraMatrices();
+        tri.Draw(1);
         
-        Renderer::Draw(*tri2.VAO, tri2.shaderProgram, *tri2.VBO);
-        Renderer::Draw(*tri.VAO, tri.shaderProgram, *tri.VBO);
-
-        //tri.Draw(1);
-        //tri2.Draw(1);
-        ApplyPerspective(*Camera::main, tri.shaderProgram, (WorldObject)tri);
-
-        //glCall(glDrawArrays(GL_TRIANGLES, 0, 4096));
+        tri2.Draw(1);
         PrintErrors();
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
+    
+    Cleanup();
+    MCheckMemory();
     return 0;
-    glfwTerminate();
-
-    //cum
-
-    // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    /*glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);*/
-
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
 }

@@ -56,6 +56,17 @@ void ViewResizeCallback(GLFWwindow* window, int width, int height)
 	glViewport(0, 0, width, height);
 }
 
+void MSetupMemoryChecks()
+{
+	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+}
+
+void MCheckMemory()
+{
+	_CrtDumpMemoryLeaks();
+
+}
+
 GLFWwindow* Setup()
 {
 	// glfw: initialize and configure
@@ -80,12 +91,8 @@ GLFWwindow* Setup()
 	}
 
 	glfwMakeContextCurrent(window);
+	gladLoadGL();
 
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
-		std::cout << "Failed to initialize GLAD" << std::endl;
-		return nullptr;
-	}
 
 	glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
 	glViewport(0, 0, width, height);
@@ -99,6 +106,11 @@ class GLObject
 public:
 
 	uint id = -1;
+
+	GLObject()
+	{
+		objects.push_back(*this);
+	}
 
 	virtual string ToString()
 	{
@@ -115,7 +127,18 @@ public:
 	}
 
 	GLObject* globj = this;
+	static vector<GLObject> objects;
 };
+
+void Cleanup()
+{
+	for (int i = 0; i < GLObject::objects.size(); i++)
+	{
+		GLObject::objects[i].Delete();
+	}
+
+	glfwTerminate();
+}
 
 class WorldObject 
 {
@@ -196,15 +219,11 @@ public:
 	void Compile()
 	{
 		glCompileShader(this->id);
+	}
 
-		int success;
-		char infoLog[512];
-		glGetShaderiv(this->id, GL_COMPILE_STATUS, &success);
-		if (!success)
-		{
-			glGetShaderInfoLog(this->id, 512, NULL, infoLog);
-			std::cout << "Shader compilation failed: \n" << infoLog << std::endl;
-		}
+	void Delete()
+	{
+		glDeleteShader(id);
 	}
 };
 
@@ -212,11 +231,6 @@ class ShaderProgram : protected GLObject
 {
 public:
 	vector<Shader> linkedShaders;
-
-	ShaderProgram()
-	{
-
-	}
 
 	void InitializeProgram(vector<Shader> shaders)
 	{
@@ -236,6 +250,11 @@ public:
 	void UseProgram()
 	{
 		glUseProgram(this->id);
+	}
+
+	void Delete()
+	{
+		glDeleteProgram(id);
 	}
 };
 
@@ -258,6 +277,11 @@ public:
 	void Bind()
 	{
 		glBindVertexArray(this->id);
+	}
+
+	void Delete()
+	{
+		glDeleteVertexArrays(size, &id);
 	}
 };
 
@@ -282,24 +306,29 @@ public:
 	{
 		this->size = size;
 		this->buffer = buffer;
-		glGenBuffers(size, &this->id);
+		glGenBuffers(1, &this->id);
 	}
 
 	void Bind(GLenum toWhat)
 	{
-		glCall(glBindBuffer(toWhat, this->id));
+		glBindBuffer(toWhat, this->id);
 	}
 	
 	void Copy(GLenum buffer, void* data, int size, GLenum drawType)
 	{
-		this->data = &data;
+		this->data = data;
 		this->drawType = drawType;
 		this->buffer = buffer;
 		this->size = size;
 
-		glCall(glBindBuffer(buffer, this->id));
-		glCall(glBufferData(buffer, this->size, data, drawType));
+		glBindBuffer(buffer, this->id);
+		glBufferData(buffer, this->size, data, drawType);
 		PrintErrors();
+	}
+
+	void Delete()
+	{
+		glDeleteBuffers(size, &id);
 	}
 };
 
@@ -319,7 +348,7 @@ public:
 
 	static Camera* main;
 
-	Camera(projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
+	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
 	{
 		this->ProjectionMode = mode;
 		
@@ -364,10 +393,30 @@ public:
 	static void Initialize();	
 	static void CopyToBuffer(void* data, int dataSize, GLenum buffer, GLenum usage);
 	static void BindBuffers();
-	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo);
+	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo);
 };
 
-class Triangle : public WorldObject
+class VertexAttribute
+{
+public:
+	int position, size;
+	GLenum type;
+	GLboolean normalize;
+	int stride;
+
+	VertexAttribute(int position, int size, GLenum type, GLboolean normalize, int stride)
+	{
+		this->position = position;
+		this->size = size;
+		this->type = type;
+		this->normalize = normalize;
+		this->stride = stride;
+		glVertexAttribPointer(position, size, type, normalize, stride, (void*)0);
+		glEnableVertexAttribArray(position);
+	}
+};
+
+class Cube : public WorldObject
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
@@ -375,12 +424,12 @@ public:
 	Shader VertShader = Shader(vertexShaderSource, GL_VERTEX_SHADER), FragShader = Shader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 	ShaderProgram shaderProgram = ShaderProgram();
 
+
+
 	void Initialize(int mode = 0)
 	{
-
 		if (mode == 0)
 		{
-			ResetState();
 			VertShader.CreateShader();
 			VertShader.LinkCode(vertexShaderSource);
 			VertShader.Compile();
@@ -392,12 +441,48 @@ public:
 			shaderProgram.InitializeProgram({ VertShader, FragShader });
 
 			float vertices[] = {
-			-0.5f, -0.5f, 0.0f, // left  
-			 0.5f, -0.5f, 0.0f, // right 
-			 0.0f,  0.5f, 0.0f,
-			0.0f,  0.5f, 0.5f,
-			};
+	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+			};
 
 			VAO->Generate(1);
 			VAO->Bind();
@@ -406,41 +491,7 @@ public:
 			VBO->Bind(GL_ARRAY_BUFFER);
 			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-			glEnableVertexAttribArray(0);
-
-			ResetState();
-		}
-
-		if (mode == 2)
-		{
-			ResetState();
-			float vertices[] = {
-			-0.5f, -0.5f, 0.0f, // left  
-			 0.5f, -0.5f, 0.0f, // right 
-			 0.0f,  0.5f, 0.0f,
-			0.0f,  0.5f, 0.5f,
-			};
-
-			VertShader.CreateShader();
-			VertShader.LinkCode(vertexShaderSource);
-			VertShader.Compile();
-
-			FragShader.CreateShader();
-			FragShader.LinkCode(fragmentShaderSource);
-			FragShader.Compile();
-
-			shaderProgram.InitializeProgram({ VertShader, FragShader });
-
-			VAO->Generate(1);
-			VAO->Bind();
-
-			VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
-			VBO->Bind(GL_ARRAY_BUFFER);
-			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
-
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-			glEnableVertexAttribArray(0);
+			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float));
 
 			ResetState();
 		}
@@ -457,7 +508,68 @@ public:
 
 		if (mode == 1)
 		{
-			Renderer::Draw(*VAO, shaderProgram, *VBO);
+			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
+		}
+	}
+};
+
+class Triangle : public WorldObject
+{
+public:
+	VertexArrayObject* VAO = new VertexArrayObject();
+	BufferObject* VBO = new BufferObject();
+	Shader VertShader = Shader(vertexShaderSource, GL_VERTEX_SHADER), FragShader = Shader(fragmentShaderSource, GL_FRAGMENT_SHADER);
+	ShaderProgram shaderProgram = ShaderProgram();
+
+
+
+	void Initialize(int mode = 0)
+	{
+		if (mode == 0)
+		{
+			VertShader.CreateShader();
+			VertShader.LinkCode(vertexShaderSource);
+			VertShader.Compile();
+
+			FragShader.CreateShader();
+			FragShader.LinkCode(fragmentShaderSource);
+			FragShader.Compile();
+
+			shaderProgram.InitializeProgram({ VertShader, FragShader });
+
+
+			float vertices[] = {
+				-0.5f, -0.5f, 0.0f, // left  
+				0.5f, -0.5f, 0.0f, // right 
+				0.0f,  0.5f, 0.0f,
+			};
+
+
+			VAO->Generate(1);
+			VAO->Bind();
+
+			VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
+			VBO->Bind(GL_ARRAY_BUFFER);
+			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
+
+			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
+			
+			ResetState();
+		}
+	}
+
+	void Draw(int mode = 0)
+	{
+		if (mode == 0)
+		{
+			VBO->Bind(GL_ARRAY_BUFFER);
+			shaderProgram.UseProgram();
+			VAO->Bind();
+		}
+
+		if (mode == 1)
+		{
+			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
 	}
 };
