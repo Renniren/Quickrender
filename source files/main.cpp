@@ -26,8 +26,6 @@ void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, Wo
 
 int main()
 {
-    MSetupMemoryChecks();
-
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -130,6 +128,5 @@ int main()
     }
     
     Cleanup();
-    MCheckMemory();
     return 0;
 }
