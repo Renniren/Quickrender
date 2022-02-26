@@ -6,6 +6,7 @@
 #include <quickrender.h>
 //this exists purely because I'm too lazy to type out certain shit
 
+#define uint unsigned int
 #define onevec vec3(1,1,1)
 #define zerovec vec3(0,0,0)
 #define cstring const char*

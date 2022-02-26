@@ -18,10 +18,9 @@ void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, Wo
     va.Bind();
     bo.Bind(bo.buffer);
     pro.UseProgram();
+    ApplyPerspective(*Camera::main, pro, wo);
 
     glDrawArrays(GL_TRIANGLES, 0, bo.size);
-
-    ApplyPerspective(*Camera::main, pro, wo);
     ResetState();
 }
 
@@ -34,20 +33,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(width, height, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-
-    glfwMakeContextCurrent(window);
-    gladLoadGL();
-
-
-    glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
-    glViewport(0, 0, width, height);
+    GLFWwindow* window = glSetup();
 
     Camera cam = Camera(Camera::projectionMode::Perspective, true);
     Triangle tri = Triangle();
@@ -60,7 +46,7 @@ int main()
     cam.position = vec3(0, -3, 0);
 
     tri.Initialize(0);
-    tri.euler = vec3(90, 0, 0);
+    tri.euler = vec3(0, 0, 0);
     tri.position = vec3(0, 1, 0);
     tri.scale = vec3(1, 1, 1);
     cam.position = vec3(0, 0, 5);
@@ -68,7 +54,7 @@ int main()
     tri2.Initialize(0);
     tri2.position = vec3(0, 3, 0);
     tri2.scale = onevec;
-    tri2.euler = vec3(90, 0, 0);
+    tri2.euler = vec3(0, 0, 0);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -113,9 +99,31 @@ int main()
             cam.position.y += speed * deltaTime;
         }
 
+        if (glfwGetKey(window, GLFW_KEY_C))
+        {
+            cam.euler.y += speed * deltaTime;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_Z))
+        {
+            cam.euler.y -= speed * deltaTime;
+        }
+
+
+        if (glfwGetKey(window, GLFW_KEY_R))
+        {
+            tri.euler.z += speed * deltaTime;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_T))
+        {
+            tri2.euler.z -= speed * deltaTime;
+        }
+
+
         tri.Draw(1);
-        
         tri2.Draw(1);
+        
         PrintErrors();
         glfwSwapBuffers(window);
         glfwPollEvents();

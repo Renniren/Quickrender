@@ -2,7 +2,6 @@
 #define QUICKRENDER_MAIN_HEADER
 
 #pragma once
-#include <quickdefines.h>
 
 #include <glad.h>
 #include <string>
@@ -14,6 +13,7 @@
 #include <sstream>
 #include <iostream>
 #include <quickerror.h>
+#include <quickdefines.h>
 #include <quickmacros.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -30,23 +30,30 @@ const char* vertexShaderSource =
 "   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
 "}\0";
 
-const char* fragmentShaderSource = "#version 330 core\n"
+const char* fragmentShaderSource = 
+"#version 330 core\n"
 "out vec4 FragColor;\n"
+"uniform vec4 color;\n"
 "void main()\n"
 "{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+"   FragColor = color;\n"
 "}\n\0";
 
 
 using namespace std;
 using namespace glm;
-#define uint unsigned int
+
 
 int width = 800, height = 600;
 
 void ResetState()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+	glBindTexture(GL_TEXTURE_1D, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_3D, 0);
+
 	glUseProgram(0);
 	glBindVertexArray(0);
 }
@@ -54,6 +61,11 @@ void ResetState()
 void ViewResizeCallback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
+}
+
+void MouseCallback(GLFWwindow* window, double x, double y)
+{
+
 }
 
 void MSetupMemoryChecks()
@@ -64,10 +76,11 @@ void MSetupMemoryChecks()
 void MCheckMemory()
 {
 	_CrtDumpMemoryLeaks();
-
 }
 
-GLFWwindow* Setup()
+
+
+GLFWwindow* glSetup()
 {
 	// glfw: initialize and configure
    // ------------------------------
@@ -227,29 +240,45 @@ public:
 	}
 };
 
-class ShaderProgram : protected GLObject
+class ShaderProgram : public GLObject
 {
 public:
 	vector<Shader> linkedShaders;
+	bool initialized;
 
 	void InitializeProgram(vector<Shader> shaders)
 	{
+		if (initialized)
+		{
+			glDeleteProgram(id);
+			initialized = false;
+		}
+
 		this->id = glCreateProgram();
 		for (int i = 0; i < shaders.size(); i++)
 		{
 			glAttachShader(this->id, shaders[i].id);
 		}
 		glLinkProgram(this->id);
+		initialized = true;
+	}
+
+
+	void UseProgram() const
+	{
+		glUseProgram(this->id);
+	}
+
+	void setVec4(const std::string& name, const vec4& vect) const
+	{
+		glUseProgram(id);
+		glUniform4f(glGetUniformLocation(this->id, name.c_str()), (GLfloat)vect.x, (GLfloat)vect.y, (GLfloat)vect.z, (GLfloat)vect.w);
 	}
 
 	void setMat4(const std::string& name, const glm::mat4& mat) const
 	{
+		glUseProgram(id);
 		glUniformMatrix4fv(glGetUniformLocation(this->id, name.c_str()), 1, GL_FALSE, &mat[0][0]);
-	}
-
-	void UseProgram()
-	{
-		glUseProgram(this->id);
 	}
 
 	void Delete()
@@ -360,11 +389,11 @@ public:
 
 	void UpdateCameraMatrices()
 	{
-		view = translate(view, -position);
 		view = rotate(view, euler.x, vec3(0, 0, 1));
 		view = rotate(view, euler.y, vec3(0, 1, 0));
 		view = rotate(view, euler.z, vec3(1, 0, 0));
 
+		view = translate(view, -position);
 		projection = perspective(radians(FieldOfView), float(width / height), NearClip, FarClip);
 	}
 };
@@ -409,6 +438,28 @@ public:
 	}
 };
 
+class Texture : public GLObject
+{
+public:
+	void* texData;
+	int width, height, MipmapLevel;
+
+	GLenum target, format, imageFormat, datatype;
+
+	Texture()
+	{
+		glGenTextures(1, &id);
+	}
+
+	void GenerateTexture(GLenum target, int mipmaplevel, GLenum imageformat, int width, int height, GLenum format, GLenum datatype, void* data, bool makeMipmap = true)
+	{
+		glBindTexture(target, id);
+		glTexImage2D(target, mipmaplevel, imageformat, width, height, 0, format, datatype, data);
+		if (makeMipmap) glGenerateMipmap(GL_TEXTURE_2D);
+		glBindTexture(target, 0);
+	}
+};
+
 class Cube : public WorldObject
 {
 public:
@@ -432,6 +483,8 @@ public:
 			FragShader.Compile();
 
 			shaderProgram.InitializeProgram({ VertShader, FragShader });
+
+			
 
 			float vertices[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -501,6 +554,7 @@ public:
 
 		if (mode == 1)
 		{
+			shaderProgram.setVec4("color", vec4(1.0f, 0.3, 0.9f, 0.2f));
 			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
 	}
@@ -562,6 +616,7 @@ public:
 
 		if (mode == 1)
 		{
+			shaderProgram.setVec4("color", vec4(0.4f, 0.9f, 0.1f, 0.5f));
 			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
 	}

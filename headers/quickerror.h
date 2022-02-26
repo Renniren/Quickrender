@@ -4,7 +4,8 @@
 
 #include <quickrender.h>
 
-#define pragmatism __debugbreak();
+#define pragmatism __debugbreak(); 
+#define panic __debugbreak();
 
 void PrintErrors()
 {
