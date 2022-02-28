@@ -64,6 +64,8 @@ char* GetWorkingDirectory()
 	return cCurrentPath;
 }
 
+
+
 string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
 string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
 #ifndef QR_PRIMITIVES
@@ -154,6 +156,8 @@ void MCheckMemory()
 
 GLFWwindow* glSetup()
 {
+	stbi_set_flip_vertically_on_load(true);
+	
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
@@ -341,13 +345,19 @@ public:
 		glUseProgram(this->id);
 	}
 
-	void setVec4(const std::string& name, const vec4& vect) const
+	void setFloat(const string name, const float& number) const
+	{
+		glUseProgram(id);
+		glUniform1f(glGetUniformLocation(this->id, name.c_str()), number);
+	}
+
+	void setVec4(const string& name, const vec4& vect) const
 	{
 		glUseProgram(id);
 		glUniform4f(glGetUniformLocation(this->id, name.c_str()), (GLfloat)vect.x, (GLfloat)vect.y, (GLfloat)vect.z, (GLfloat)vect.w);
 	}
 
-	void setMat4(const std::string& name, const glm::mat4& mat) const
+	void setMat4(const string& name, const glm::mat4& mat) const
 	{
 		glUseProgram(id);
 		glUniformMatrix4fv(glGetUniformLocation(this->id, name.c_str()), 1, GL_FALSE, &mat[0][0]);
@@ -557,18 +567,24 @@ public:
 	}
 };
 
-Texture* LoadTexture(string path, GLenum target, bool MakeMipmaps)
+Texture* LoadTexture(string path, GLenum target)
 {
 	Texture* tex = new Texture();
 	int height, width, numChannels;
-	unsigned char* data = stbi_load(path.c_str(), &width, &height, &numChannels, 0);
+	unsigned char *data = stbi_load(path.c_str(), &width, &height, &numChannels, 0);
+
+	GLenum format = GL_RGB;
 
 	if (!data)
 	{
 		cout << "Failed to load texture with given path: " << path << endl;
+		panic
 	}
 
-	glCall(tex->GenerateTexture(target, 0, GL_RGB, height, width, GL_RGB, GL_UNSIGNED_BYTE, data, MakeMipmaps));
+	if (numChannels == 4) format = GL_RGBA;
+
+	glCall(tex->GenerateTexture(target, 0, GL_RGB, width, height, format, GL_UNSIGNED_BYTE, data, true));
+	cout << numChannels << endl;
 	stbi_image_free(data);
 	return tex;
 }
@@ -606,7 +622,7 @@ public:
 			VBO->Bind(GL_ARRAY_BUFFER);
 			VBO->Copy(GL_ARRAY_BUFFER, PRIMITIVE_CUBE, sizeof(PRIMITIVE_CUBE), GL_STATIC_DRAW);
 
-			texture = LoadTexture(TEXTURES_DIRECTORY + string("container.jpg"), GL_TEXTURE_2D, true);
+			texture = LoadTexture(TEXTURES_DIRECTORY + string("circle.png"), GL_TEXTURE_2D);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float));
 			VertexAttribute(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (3 * sizeof(float)));
