@@ -230,7 +230,7 @@ void Cleanup()
 	glfwTerminate();
 }
 
-class WorldObject 
+class Transform 
 {
 public:
 
@@ -240,7 +240,7 @@ public:
 
 	mat4 model = mat4(1.0f);
 
-	vec3 forward = zerovec, right = zerovec, up = zerovec, direction = zerovec;
+	vec3 forward = zerovec, right = zerovec, up = zerovec;
 	
 	void UpdateDirections(bool forCamera = false)
 	{
@@ -275,7 +275,7 @@ public:
 		model = glm::scale(model, scale);
 	}
 
-	WorldObject* wobj = this;
+	Transform* wobj = this;
 };
 
 class Shader : public GLObject
@@ -465,7 +465,7 @@ public:
 	}
 };
 
-class Camera : public WorldObject
+class Camera : public Transform
 {
 protected:
 
@@ -558,7 +558,7 @@ public:
 	}
 };
 
-void ApplyPerspective(Camera source, ShaderProgram pro, WorldObject obj)
+void ApplyPerspective(Camera source, ShaderProgram pro, Transform obj)
 {
 	pro.UseProgram();
 	obj.UpdateMatrices();
@@ -575,7 +575,7 @@ private:
 	Renderer(){}
 
 public:
-	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
+	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, Transform wo)
 	{
 		va.Bind();
 		bo.Bind(bo.buffer);
@@ -677,7 +677,7 @@ Texture* LoadTexture(string path, GLenum target)
 	return tex;
 }
 
-class Cube : public WorldObject
+class Cube : public Transform
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
@@ -737,7 +737,7 @@ public:
 	}
 };
 
-class Triangle : public WorldObject
+class Triangle : public Transform
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
