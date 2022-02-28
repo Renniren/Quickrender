@@ -4,18 +4,10 @@
 #include <crtdbg.h>
 using namespace std;
 
-
-//declarations
-
-float deltaTime = 0, lastFrame = 0;
-Camera* Camera::main = nullptr;
-GLFWwindow* window;
-vector<GLObject> GLObject::objects = vector<GLObject>();
-
 int main()
 {
     float speed = 0.9f;
-    GLFWwindow* window = glSetup();
+    window = glSetup();
 
     Camera cam = Camera(Camera::projectionMode::Perspective, true);
     Triangle tri = Triangle();

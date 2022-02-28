@@ -276,6 +276,8 @@ public:
 	}
 
 	Transform* wobj = this;
+
+	static vector<Transform> ActiveTransforms;
 };
 
 class Shader : public GLObject
@@ -797,5 +799,12 @@ public:
 		}
 	}
 };
+
+vector<GLObject> GLObject::objects = vector<GLObject>();
+vector<Transform> Transform::ActiveTransforms = vector<Transform>();
+Camera* Camera::main = nullptr;
+float deltaTime = 0, lastFrame = 0;
+GLFWwindow* window;
+
 
 #endif
