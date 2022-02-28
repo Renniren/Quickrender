@@ -44,9 +44,6 @@
     <ClInclude Include="headers\quickrender.h">
       <Filter>Header Files\Quickrender</Filter>
     </ClInclude>
-    <ClInclude Include="headers\quickmacros.h">
-      <Filter>Header Files\Quickrender</Filter>
-    </ClInclude>
     <ClInclude Include="headers\glad\glad.h">
       <Filter>Header Files\glad</Filter>
     </ClInclude>
@@ -58,9 +55,6 @@
     </ClInclude>
     <ClInclude Include="headers\KHR\khrplatform.h">
       <Filter>Header Files\khr</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\quickerror.h">
-      <Filter>Header Files\Quickrender</Filter>
     </ClInclude>
     <ClInclude Include="headers\glm\common.hpp">
       <Filter>Header Files\glm</Filter>
@@ -130,9 +124,6 @@
     </ClInclude>
     <ClInclude Include="headers\glm\vector_relational.hpp">
       <Filter>Header Files\glm</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\quickdefines.h">
-      <Filter>Header Files\Quickrender</Filter>
     </ClInclude>
     <ClInclude Include="stb_image.h">
       <Filter>Header Files\Quickrender</Filter>

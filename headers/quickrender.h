@@ -9,25 +9,117 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <stdlib.h>
 #include <glfw3.h>
+#include <stdlib.h>
 #include <direct.h>
 #include <fstream>
 #include <glm.hpp>
 #include <sstream>
 #include <iostream>
 #include <stb_image.h>
-#include <quickerror.h>
-#include <quickdefines.h>
-#include <quickmacros.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#ifndef QUICKRENDER_MACROS
+#define QUICKRENDER_MACROS
+
+#define pragmatism __debugbreak(); 
+#define panic __debugbreak();
+
+#define uint unsigned int
+#define onevec vec3(1,1,1)
+#define zerovec vec3(0,0,0)
+#define cstring const char*
+
+static bool glPrintErrors(const char* function, const char* file, int line)
+{
+	using namespace std;
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR)
+	{
+		while (err != GL_NO_ERROR)
+		{
+			const char* strerror = "";
+			switch (err)
+			{
+			case 1280:
+				strerror = "Invalid enum";
+				break;
+			case 1281:
+				strerror = "Invalid value";
+				break;
+			case 1282:
+				strerror = "Invalid operation";
+				break;
+
+
+			case 1285:
+				strerror = "OpenGL ran out of memory";
+				break;
+			}
+
+			cout << strerror << " in function " << function << " in file " << file << " on line " << line << endl;
+			return false;
+		}
+	}
+	return true;
+}
+
+
+#define STOP_ON_FAILURE(x) if ((!x)) __debugbreak();
+
+#define glCall(x)\
+	x;\
+	STOP_ON_FAILURE(glPrintErrors(#x, __FILE__, __LINE__));
+
+void PrintErrors()
+{
+	using namespace std;
+	GLenum err = glGetError();
+
+	if (err == 0) return;
+
+	switch (err)
+	{
+	case 1280:
+		cout << "Error: 1280 - Invalid enum. Perhaps you used an enum where it shouldn't be?" << endl;
+		break;
+
+	case 1281:
+		cout << "Error: 1281 - Invalid value. Perhaps you passed the wrong type of data somewhere?" << endl;
+		break;
+
+	case 1282:
+		cout << "Error: 1282 - Invalid operation." << endl;
+		break;
+
+	case 1283:
+		cout << "Error: 1283 - stack overflow." << endl;
+		break;
+
+	case 1284:
+		cout << "Error: 1284 - stack... underflow? How the fuck did you even do that?" << endl;
+		break;
+
+	case 1285:
+		cout << "Error: 1285 - OpenGL ran out of memory." << endl;
+		break;
+
+	case 1286:
+		cout << "Error: 1286 - Invalid framebuffer read/write." << endl;
+		break;
+	}
+
+}
+
+#endif
+
 #ifndef QR_SETTINGS
 #define QR_SETTINGS
+
 int width = 800, height = 600;
-const char* WINDOW_NAME = "test";
+const char* WINDOW_NAME = "Game";
 
 #endif
 
@@ -802,9 +894,11 @@ public:
 
 vector<GLObject> GLObject::objects = vector<GLObject>();
 vector<Transform> Transform::ActiveTransforms = vector<Transform>();
+
 Camera* Camera::main = nullptr;
-float deltaTime = 0, lastFrame = 0;
 GLFWwindow* window;
+
+float deltaTime = 0, lastFrame = 0;
 
 
 #endif
