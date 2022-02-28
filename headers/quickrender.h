@@ -1,17 +1,22 @@
 #ifndef QUICKRENDER_MAIN_HEADER
 #define QUICKRENDER_MAIN_HEADER
 
+#define STB_IMAGE_IMPLEMENTATION
+
 #pragma once
 
 #include <glad.h>
 #include <string>
 #include <vector>
+#include <stdio.h>
 #include <stdlib.h>
 #include <glfw3.h>
+#include <direct.h>
 #include <fstream>
 #include <glm.hpp>
 #include <sstream>
 #include <iostream>
+#include <stb_image.h>
 #include <quickerror.h>
 #include <quickdefines.h>
 #include <quickmacros.h>
@@ -46,10 +51,75 @@ using namespace glm;
 
 int width = 800, height = 600;
 
+char* GetWorkingDirectory()
+{
+	char cCurrentPath[FILENAME_MAX];
+
+	if (!_getcwd(cCurrentPath, sizeof(cCurrentPath)))
+	{
+		return nullptr;
+	}
+
+	cCurrentPath[sizeof(cCurrentPath) - 1] = '/0'; /* not really required */
+	return cCurrentPath;
+}
+
+string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
+string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
+#ifndef QR_PRIMITIVES
+#define QR_PRIMITIVES
+float PRIMITIVE_CUBE[] = {
+	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+float PRIMITIVE_TRIANGLE[] = {
+				-0.5f, -0.5f, 0.0f, // left  
+				0.5f, -0.5f, 0.0f, // right 
+				0.0f,  0.5f, 0.0f,
+};
+#endif
 void ResetState()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
 	glBindTexture(GL_TEXTURE_1D, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindTexture(GL_TEXTURE_3D, 0);
@@ -58,8 +128,10 @@ void ResetState()
 	glBindVertexArray(0);
 }
 
-void ViewResizeCallback(GLFWwindow* window, int width, int height)
+void ViewResizeCallback(GLFWwindow* window, int w, int h)
 {
+	width = w;
+	height = h;
 	glViewport(0, 0, width, height);
 }
 
@@ -206,7 +278,7 @@ public:
 		glShaderSource(this->id, 1, &SourceCode, NULL);
 	}
 
-	void LinkCodeWithPath(cstring path)
+	void LinkCodeWithPath(string path)
 	{
 		// 1. retrieve the vertex/fragment source code from filePath
 		std::string vertexCode;
@@ -225,7 +297,7 @@ public:
 		}
 		catch (std::ifstream::failure& e)
 		{
-			std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ: " << e.what() << std::endl;
+			std::cout << "Could not successfully read the shader's file: " << e.what() << std::endl;
 		}
 	}
 
@@ -394,7 +466,7 @@ public:
 		view = rotate(view, euler.z, vec3(1, 0, 0));
 
 		view = translate(view, -position);
-		projection = perspective(radians(FieldOfView), float(width / height), NearClip, FarClip);
+		projection = perspective(radians(FieldOfView), float((width * 0.69) / (height * 0.69)), NearClip, FarClip);
 	}
 };
 
@@ -426,14 +498,14 @@ public:
 	GLboolean normalize;
 	int stride;
 
-	VertexAttribute(int position, int size, GLenum type, GLboolean normalize, int stride)
+	VertexAttribute(int position, int size, GLenum type, GLboolean normalize, int stride, int offset = 0)
 	{
 		this->position = position;
 		this->size = size;
 		this->type = type;
 		this->normalize = normalize;
 		this->stride = stride;
-		glVertexAttribPointer(position, size, type, normalize, stride, (void*)0);
+		glVertexAttribPointer(position, size, type, normalize, stride, (void*)offset);
 		glEnableVertexAttribArray(position);
 	}
 };
@@ -449,16 +521,57 @@ public:
 	Texture()
 	{
 		glGenTextures(1, &id);
+		width = 0;
+		height = 0;
+		MipmapLevel = 0;
+		target = 0;
+		format = 0;
+		imageFormat = 0;
+		datatype = 0;
+		texData = nullptr;
 	}
 
 	void GenerateTexture(GLenum target, int mipmaplevel, GLenum imageformat, int width, int height, GLenum format, GLenum datatype, void* data, bool makeMipmap = true)
 	{
+		this->target = target;
+		this->MipmapLevel = mipmaplevel;
+		this->format = imageformat;
+		this->format = format;
+
+		this->height = height;
+		this->width = width;
+
+		this->texData = data;
+
+
+
 		glBindTexture(target, id);
 		glTexImage2D(target, mipmaplevel, imageformat, width, height, 0, format, datatype, data);
 		if (makeMipmap) glGenerateMipmap(GL_TEXTURE_2D);
 		glBindTexture(target, 0);
 	}
+
+	void Bind(GLenum target)
+	{
+		glBindTexture(target, id);
+	}
 };
+
+Texture* LoadTexture(string path, GLenum target, bool MakeMipmaps)
+{
+	Texture* tex = new Texture();
+	int height, width, numChannels;
+	unsigned char* data = stbi_load(path.c_str(), &width, &height, &numChannels, 0);
+
+	if (!data)
+	{
+		cout << "Failed to load texture with given path: " << path << endl;
+	}
+
+	glCall(tex->GenerateTexture(target, 0, GL_RGB, height, width, GL_RGB, GL_UNSIGNED_BYTE, data, MakeMipmaps));
+	stbi_image_free(data);
+	return tex;
+}
 
 class Cube : public WorldObject
 {
@@ -467,7 +580,7 @@ public:
 	BufferObject* VBO = new BufferObject();
 	Shader VertShader = Shader(vertexShaderSource, GL_VERTEX_SHADER), FragShader = Shader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 	ShaderProgram shaderProgram = ShaderProgram();
-
+	Texture* texture;
 
 
 	void Initialize(int mode = 0)
@@ -475,70 +588,29 @@ public:
 		if (mode == 0)
 		{
 			VertShader.CreateShader();
-			VertShader.LinkCode(vertexShaderSource);
+			cout << SHADERS_DIRECTORY + string("vertex.glsl") << endl;
+			VertShader.LinkCodeWithPath(SHADERS_DIRECTORY + string("vertexTextured.glsl"));
 			VertShader.Compile();
 
 			FragShader.CreateShader();
-			FragShader.LinkCode(fragmentShaderSource);
+			FragShader.LinkCodeWithPath(SHADERS_DIRECTORY + string("fragmentTextured.glsl"));
 			FragShader.Compile();
 
 			shaderProgram.InitializeProgram({ VertShader, FragShader });
-
-			
-
-			float vertices[] = {
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-			};
+			shaderProgram.setVec4("color", vec4(1.0f, 0.3, 0.9f, 0.2f));
 
 			VAO->Generate(1);
 			VAO->Bind();
 
-			VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
+			VBO->Generate(sizeof(PRIMITIVE_CUBE), GL_ARRAY_BUFFER);
 			VBO->Bind(GL_ARRAY_BUFFER);
-			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
+			VBO->Copy(GL_ARRAY_BUFFER, PRIMITIVE_CUBE, sizeof(PRIMITIVE_CUBE), GL_STATIC_DRAW);
+
+			texture = LoadTexture(TEXTURES_DIRECTORY + string("container.jpg"), GL_TEXTURE_2D, true);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float));
-
+			VertexAttribute(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (3 * sizeof(float)));
+			PrintErrors();
 			ResetState();
 		}
 	}
@@ -554,7 +626,7 @@ public:
 
 		if (mode == 1)
 		{
-			shaderProgram.setVec4("color", vec4(1.0f, 0.3, 0.9f, 0.2f));
+			texture->Bind(GL_TEXTURE_2D);
 			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
 	}

@@ -134,6 +134,9 @@
     <ClInclude Include="headers\quickdefines.h">
       <Filter>Header Files\Quickrender</Filter>
     </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Header Files\Quickrender</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="headers\glm\CMakeLists.txt">

@@ -195,6 +195,7 @@
     <ClInclude Include="headers\quickerror.h" />
     <ClInclude Include="headers\quickmacros.h" />
     <ClInclude Include="headers\quickrender.h" />
+    <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="headers\glm\CMakeLists.txt" />

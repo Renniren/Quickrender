@@ -56,6 +56,7 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
 
+
     float speed = 0.9f;
 
     while (!glfwWindowShouldClose(window))
@@ -89,12 +90,12 @@ int main()
 
         if (glfwGetKey(window, GLFW_KEY_E))
         {
-            cam.position.y -= speed * deltaTime;
+            cam.position.y += speed * deltaTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_Q))
         {
-            cam.position.y += speed * deltaTime;
+            cam.position.y -= speed * deltaTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_C))
@@ -118,11 +119,11 @@ int main()
             tri2.euler.z -= speed * deltaTime;
         }
 
+        
 
         tri.Draw(1);
         tri2.Draw(1);
         
-        PrintErrors();
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
