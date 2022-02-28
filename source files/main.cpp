@@ -6,31 +6,15 @@ using namespace std;
 
 
 //declarations
+
 float deltaTime = 0, lastFrame = 0;
 Camera* Camera::main = nullptr;
 GLFWwindow* window;
-
 vector<GLObject> GLObject::objects = vector<GLObject>();
-
-
-void Renderer::Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
-{
-    va.Bind();
-    bo.Bind(bo.buffer);
-    pro.UseProgram();
-    ApplyPerspective(*Camera::main, pro, wo);
-
-    glDrawArrays(GL_TRIANGLES, 0, bo.size);
-    ResetState();
-}
 
 int main()
 {
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
+    float speed = 0.9f;
     GLFWwindow* window = glSetup();
 
     Camera cam = Camera(Camera::projectionMode::Perspective, true);
@@ -55,63 +39,41 @@ int main()
     tri2.euler = vec3(0, 0, 0);
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_MULTISAMPLE);
 
-
-    float speed = 0.9f;
+    
 
     while (!glfwWindowShouldClose(window))
     {
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
        float currentFrame = static_cast<float>(glfwGetTime());
        deltaTime = currentFrame - lastFrame;
        lastFrame = currentFrame;
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        if (glfwGetKey(window, GLFW_KEY_W))
-        {
-            cam.position.z -= speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_S))
-        {
-            cam.position.z += speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_A))
-        {
-            cam.position.x -= speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_D))
-        {
-            cam.position.x += speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_E))
-        {
-            cam.position.y += speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_Q))
-        {
-            cam.position.y -= speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_C))
-        {
-            cam.euler.y += speed * deltaTime;
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_Z))
-        {
-            cam.euler.y -= speed * deltaTime;
-        }
-
-
         if (glfwGetKey(window, GLFW_KEY_R))
         {
             tri.euler.z += speed * deltaTime;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_UP))
+        {
+            tri2.position += tri2.forward * speed * deltaTime;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_DOWN))
+        {
+            tri2.position -= tri2.forward * speed * deltaTime;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_RIGHT))
+        {
+            tri2.euler.y -= speed * deltaTime;
+        }
+        if (glfwGetKey(window, GLFW_KEY_LEFT))
+        {
+            tri2.euler.y += speed * deltaTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_T))
@@ -120,7 +82,7 @@ int main()
         }
 
         
-
+        cam.DoInput(window, deltaTime);
         tri.Draw(1);
         tri2.Draw(1);
         

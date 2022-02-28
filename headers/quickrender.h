@@ -24,6 +24,13 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#ifndef QR_SETTINGS
+#define QR_SETTINGS
+int width = 800, height = 600;
+const char* WINDOW_NAME = "test";
+
+#endif
+
 const char* vertexShaderSource =
 "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
@@ -48,9 +55,6 @@ const char* fragmentShaderSource =
 using namespace std;
 using namespace glm;
 
-
-int width = 800, height = 600;
-
 char* GetWorkingDirectory()
 {
 	char cCurrentPath[FILENAME_MAX];
@@ -63,8 +67,6 @@ char* GetWorkingDirectory()
 	cCurrentPath[sizeof(cCurrentPath) - 1] = '/0'; /* not really required */
 	return cCurrentPath;
 }
-
-
 
 string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
 string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
@@ -119,6 +121,7 @@ float PRIMITIVE_TRIANGLE[] = {
 				0.0f,  0.5f, 0.0f,
 };
 #endif
+
 void ResetState()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -152,8 +155,6 @@ void MCheckMemory()
 	_CrtDumpMemoryLeaks();
 }
 
-
-
 GLFWwindow* glSetup()
 {
 	stbi_set_flip_vertically_on_load(true);
@@ -164,14 +165,14 @@ GLFWwindow* glSetup()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
+	glfwWindowHint(GLFW_SAMPLES, 4);
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(width, height, "LearnOpenGL", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(width, height, WINDOW_NAME, NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -239,8 +240,29 @@ public:
 
 	mat4 model = mat4(1.0f);
 
-	vec3 forward = zerovec	, right = zerovec, up = zerovec;
+	vec3 forward = zerovec, right = zerovec, up = zerovec, direction = zerovec;
 	
+	void UpdateDirections(bool forCamera = false)
+	{
+		if (forCamera)
+		{
+			forward.x = cos(euler.x) * sin(-euler.y);
+			forward.y = sin(euler.x);
+			forward.z = cos(euler.x) * cos(-euler.y);
+		}
+		else
+		{
+			forward.x = cos(euler.x) * sin(euler.y);
+			forward.y = sin(euler.x);
+			forward.z = cos(euler.x) * cos(euler.y);
+		}
+
+		right.x = cos(euler.y);
+		right.y = 0;
+		right.z = sin(euler.y);
+
+		up = cross(forward, right);
+	}
 
 	void UpdateMatrices()
 	{
@@ -454,10 +476,18 @@ public:
 	
 	mat4 view = mat4(1), projection = mat4(1);
 
-	//__declspec(property(get = getProjectionMatrix)) mat4 projection;
-
-
 	static Camera* main;
+
+	Camera() 
+	{
+		this->ProjectionMode = projectionMode::Perspective;
+		this->FieldOfView = 90;
+		this->FarClip = 1000;
+		this->NearClip = 0.01f;
+
+		this->view = mat4(1);
+		this->projection = mat4(1);
+	}
 
 	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
 	{
@@ -467,6 +497,54 @@ public:
 		this->FieldOfView = fov;
 		this->FarClip = fc;
 		this->NearClip = nc;
+
+		this->view = mat4(1);
+		this->projection = mat4(1);	
+	}
+
+	void DoInput(GLFWwindow* window, float deltaTime)
+	{
+		UpdateDirections(true);
+		float speed = 0.9f;
+		if (glfwGetKey(window, GLFW_KEY_W))
+		{
+			position -= (forward * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_S))
+		{
+			position += (forward * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_A))
+		{
+			position -= (right * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_D))
+		{
+			position += (right * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_E))
+		{
+			position.y += speed * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_Q))
+		{
+			position.y -= speed * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_C))
+		{
+			euler.y += speed * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_Z))
+		{
+			euler.y -= speed * deltaTime;
+		}
 	}
 
 	void UpdateCameraMatrices()
@@ -476,7 +554,7 @@ public:
 		view = rotate(view, euler.z, vec3(1, 0, 0));
 
 		view = translate(view, -position);
-		projection = perspective(radians(FieldOfView), float((width * 0.69) / (height * 0.69)), NearClip, FarClip);
+		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
 	}
 };
 
@@ -497,7 +575,17 @@ private:
 	Renderer(){}
 
 public:
-	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo);
+	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
+	{
+		va.Bind();
+		bo.Bind(bo.buffer);
+		pro.UseProgram();
+		ApplyPerspective(*Camera::main, pro, wo);
+
+		glDrawArrays(GL_TRIANGLES, 0, bo.size);
+		ResetState();
+	}
+
 };
 
 class VertexAttribute
@@ -613,7 +701,7 @@ public:
 			FragShader.Compile();
 
 			shaderProgram.InitializeProgram({ VertShader, FragShader });
-			shaderProgram.setVec4("color", vec4(1.0f, 0.3, 0.9f, 0.2f));
+			shaderProgram.setVec4("color", vec4(1));
 
 			VAO->Generate(1);
 			VAO->Bind();
@@ -622,7 +710,7 @@ public:
 			VBO->Bind(GL_ARRAY_BUFFER);
 			VBO->Copy(GL_ARRAY_BUFFER, PRIMITIVE_CUBE, sizeof(PRIMITIVE_CUBE), GL_STATIC_DRAW);
 
-			texture = LoadTexture(TEXTURES_DIRECTORY + string("circle.png"), GL_TEXTURE_2D);
+			texture = LoadTexture(TEXTURES_DIRECTORY + string("dirt.jpg"), GL_TEXTURE_2D);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float));
 			VertexAttribute(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (3 * sizeof(float)));
@@ -642,6 +730,7 @@ public:
 
 		if (mode == 1)
 		{
+			UpdateDirections();
 			texture->Bind(GL_TEXTURE_2D);
 			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
@@ -655,8 +744,6 @@ public:
 	BufferObject* VBO = new BufferObject();
 	Shader VertShader = Shader(vertexShaderSource, GL_VERTEX_SHADER), FragShader = Shader(fragmentShaderSource, GL_FRAGMENT_SHADER);
 	ShaderProgram shaderProgram = ShaderProgram();
-
-
 
 	void Initialize(int mode = 0)
 	{
@@ -704,11 +791,11 @@ public:
 
 		if (mode == 1)
 		{
+			UpdateDirections();
 			shaderProgram.setVec4("color", vec4(0.4f, 0.9f, 0.1f, 0.5f));
 			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
 	}
 };
-
 
 #endif
