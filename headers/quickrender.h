@@ -1,9 +1,15 @@
 #ifndef QUICKRENDER_MAIN_HEADER
 #define QUICKRENDER_MAIN_HEADER
 
+#ifndef QR_SETTINGS
+#define QR_SETTINGS
+#define QR_USE_ASSIMP
 #define STB_IMAGE_IMPLEMENTATION
 
-#pragma once
+int width = 800, height = 600;
+const char* const WINDOW_NAME = "test";
+
+#endif
 
 #include <glad.h>
 #include <string>
@@ -20,15 +26,14 @@
 #include <quickerror.h>
 #include <quickdefines.h>
 #include <quickmacros.h>
+#include <assimp/scene.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#ifndef QR_SETTINGS
-#define QR_SETTINGS
-int width = 800, height = 600;
-const char* WINDOW_NAME = "test";
-
+#ifdef  QR_USE_ASSIMP
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
 #endif
 
 const char* vertexShaderSource =
@@ -51,7 +56,6 @@ const char* fragmentShaderSource =
 "   FragColor = color;\n"
 "}\n\0";
 
-
 using namespace std;
 using namespace glm;
 
@@ -68,8 +72,9 @@ char* GetWorkingDirectory()
 	return cCurrentPath;
 }
 
-string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
-string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
+const string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
+const string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
+
 #ifndef QR_PRIMITIVES
 #define QR_PRIMITIVES
 float PRIMITIVE_CUBE[] = {
@@ -435,7 +440,7 @@ public:
 		data = nullptr;
 	}
 
-	void Generate(int size, GLenum buffer) 
+	void Generate(int size, GLenum buffer)
 	{
 		this->size = size;
 		this->buffer = buffer;
@@ -575,6 +580,11 @@ private:
 	Renderer(){}
 
 public:
+	static void DrawLights(ShaderProgram pro)
+	{
+
+	}
+
 	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
 	{
 		va.Bind();
@@ -797,5 +807,107 @@ public:
 		}
 	}
 };
+
+struct Color
+{
+public: 
+	float r, g, b, a;
+
+	Color operator = (Color& col)
+	{
+		this->r = col.r;
+		this->g = col.g;
+		this->b = col.b;
+		this->a = col.a;
+	}
+
+	Color operator + (Color& col)
+	{
+		this->r += col.r;
+		this->g += col.g;
+		this->b += col.b;
+		this->a += col.a;
+	}
+
+	Color operator - (Color& col)
+	{
+		this->r -= col.r;
+		this->g -= col.g;
+		this->b -= col.b;
+		this->a -= col.a;
+	}
+
+	static Color red;
+	static Color blue;
+	static Color white;
+	static Color green;
+	static Color transparent;
+};
+
+Color Color::red = { 1, 0, 0, 1 };
+Color Color::blue = { 0, 0, 1, 1 };
+Color Color::white = { 1, 1, 1, 1 };
+Color Color::green = { 0, 1, 0, 1 };
+Color Color::transparent = { 1, 1, 1, 0 };
+
+Camera* Camera::main = nullptr;
+GLFWwindow* window;
+vector<GLObject> GLObject::objects = vector<GLObject>();
+
+float deltaTime = 0, lastFrame = 0;
+
+class Light : public WorldObject
+{
+public:
+	Color color;
+	float strength = 1, range = 5;
+};
+
+class Mesh
+{
+public:
+	struct Vertex
+	{
+	public:
+		vec3 Position, Normal;
+		vec2 TextureCoordinates;
+	};
+
+	struct Texture
+	{
+	public:
+		uint id;
+		string type;
+	};
+
+	BufferObject VertexBuffer, ElementBuffer;
+	VertexArrayObject VAO;
+
+	vector<Vertex> vertices;
+	vector<uint> indices;
+	vector<Texture> textures;
+
+	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures);
+
+	void setup()
+	{
+		VAO = VertexArrayObject();
+		VAO.Generate(1);
+		
+		VertexBuffer = BufferObject();
+		VertexBuffer.Generate(1, GL_ARRAY_BUFFER);
+
+		ElementBuffer = BufferObject();
+		ElementBuffer.Generate(1, GL_ELEMENT_ARRAY_BUFFER);
+
+
+	}
+};
+
+#ifdef QR_USE_ASSIMP
+
+#endif // QR_USE_ASSIMP
+
+
 
 #endif

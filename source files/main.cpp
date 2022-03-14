@@ -1,5 +1,5 @@
 #define _CRTDBG_MAP_ALLOC
-#include <quickrender.h>
+#include "quickrender.h"
 #include <stdlib.h>
 #include <crtdbg.h>
 using namespace std;
@@ -7,10 +7,6 @@ using namespace std;
 
 //declarations
 
-float deltaTime = 0, lastFrame = 0;
-Camera* Camera::main = nullptr;
-GLFWwindow* window;
-vector<GLObject> GLObject::objects = vector<GLObject>();
 
 int main()
 {
@@ -32,7 +28,7 @@ int main()
     tri.position = vec3(0, 1, 0);
     tri.scale = vec3(1, 1, 1);
     cam.position = vec3(0, 0, 5);
-    
+
     tri2.Initialize(0);
     tri2.position = vec3(0, 3, 0);
     tri2.scale = onevec;
@@ -41,7 +37,7 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
 
-    
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -81,15 +77,15 @@ int main()
             tri2.euler.z -= speed * deltaTime;
         }
 
-        
+
         cam.DoInput(window, deltaTime);
         tri.Draw(1);
         tri2.Draw(1);
-        
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-    
+
     Cleanup();
     return 0;
 }
