@@ -15,8 +15,8 @@ const char* const WINDOW_NAME = "test";
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <stdlib.h>
 #include <glfw3.h>
+#include <stdlib.h>
 #include <direct.h>
 #include <fstream>
 #include <glm.hpp>
@@ -26,14 +26,15 @@ const char* const WINDOW_NAME = "test";
 #include <quickerror.h>
 #include <quickdefines.h>
 #include <quickmacros.h>
-#include <assimp/scene.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#ifdef  QR_USE_ASSIMP
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
+#ifndef QR_SETTINGS
+#define QR_SETTINGS
+int width = 800, height = 600;
+const char* WINDOW_NAME = "test";
+
 #endif
 
 const char* vertexShaderSource =
@@ -235,7 +236,7 @@ void Cleanup()
 	glfwTerminate();
 }
 
-class WorldObject 
+class Transform 
 {
 public:
 
@@ -245,7 +246,7 @@ public:
 
 	mat4 model = mat4(1.0f);
 
-	vec3 forward = zerovec, right = zerovec, up = zerovec, direction = zerovec;
+	vec3 forward = zerovec, right = zerovec, up = zerovec;
 	
 	void UpdateDirections(bool forCamera = false)
 	{
@@ -280,7 +281,9 @@ public:
 		model = glm::scale(model, scale);
 	}
 
-	WorldObject* wobj = this;
+	Transform* wobj = this;
+
+	static vector<Transform> ActiveTransforms;
 };
 
 class Shader : public GLObject
@@ -470,7 +473,7 @@ public:
 	}
 };
 
-class Camera : public WorldObject
+class Camera : public Transform
 {
 protected:
 
@@ -563,7 +566,7 @@ public:
 	}
 };
 
-void ApplyPerspective(Camera source, ShaderProgram pro, WorldObject obj)
+void ApplyPerspective(Camera source, ShaderProgram pro, Transform obj)
 {
 	pro.UseProgram();
 	obj.UpdateMatrices();
@@ -580,11 +583,6 @@ private:
 	Renderer(){}
 
 public:
-	static void DrawLights(ShaderProgram pro)
-	{
-
-	}
-
 	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
 	{
 		va.Bind();
@@ -687,7 +685,7 @@ Texture* LoadTexture(string path, GLenum target)
 	return tex;
 }
 
-class Cube : public WorldObject
+class Cube : public Transform
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
@@ -747,7 +745,7 @@ public:
 	}
 };
 
-class Triangle : public WorldObject
+class Triangle : public Transform
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
@@ -903,11 +901,5 @@ public:
 
 	}
 };
-
-#ifdef QR_USE_ASSIMP
-
-#endif // QR_USE_ASSIMP
-
-
 
 #endif
