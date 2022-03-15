@@ -3,13 +3,11 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 
-#pragma once
-
-#include <glad.h>
+#include "headers/glad/glad.h"
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <glfw3.h>
+#include "glfw3.h"
 #include <stdlib.h>
 #include <direct.h>
 #include <fstream>
@@ -24,7 +22,7 @@
 #ifndef QUICKRENDER_MACROS
 #define QUICKRENDER_MACROS
 
-#define pragmatism __debugbreak(); 
+#define pragmatism __debugbreak();
 #define panic __debugbreak();
 
 #define uint unsigned int
@@ -134,7 +132,7 @@ const char* vertexShaderSource =
 "   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
 "}\0";
 
-const char* fragmentShaderSource = 
+const char* fragmentShaderSource =
 "#version 330 core\n"
 "out vec4 FragColor;\n"
 "uniform vec4 color;\n"
@@ -208,8 +206,8 @@ float PRIMITIVE_CUBE[] = {
 	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 float PRIMITIVE_TRIANGLE[] = {
-				-0.5f, -0.5f, 0.0f, // left  
-				0.5f, -0.5f, 0.0f, // right 
+				-0.5f, -0.5f, 0.0f, // left
+				0.5f, -0.5f, 0.0f, // right
 				0.0f,  0.5f, 0.0f,
 };
 #endif
@@ -250,7 +248,7 @@ void MCheckMemory()
 GLFWwindow* glSetup()
 {
 	stbi_set_flip_vertically_on_load(true);
-	
+
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
@@ -275,16 +273,19 @@ GLFWwindow* glSetup()
 	glfwMakeContextCurrent(window);
 	gladLoadGL();
 
-
+	glfwSetCursorPosCallback(window, MouseCallback);
 	glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
 	glViewport(0, 0, width, height);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
 
 	return window;
 }
 
 class GLObject
 {
-	
+
 public:
 
 	uint id = -1;
@@ -322,7 +323,7 @@ void Cleanup()
 	glfwTerminate();
 }
 
-class Transform 
+class Transform
 {
 public:
 
@@ -333,10 +334,12 @@ public:
 	mat4 model = mat4(1.0f);
 
 	vec3 forward = zerovec, right = zerovec, up = zerovec;
-	
-	void UpdateDirections(bool forCamera = false)
+
+	bool BelongsToCamera;
+
+	void UpdateDirections()
 	{
-		if (forCamera)
+		if (BelongsToCamera)
 		{
 			forward.x = cos(euler.x) * sin(-euler.y);
 			forward.y = sin(euler.x);
@@ -363,7 +366,7 @@ public:
 		model = rotate(model, euler.x, vec3(1, 0, 0));
 		model = rotate(model, euler.y, vec3(0, 1, 0));
 		model = rotate(model, euler.z, vec3(0, 0, 1));
-		
+
 		model = glm::scale(model, scale);
 	}
 
@@ -529,7 +532,7 @@ public:
 		data = nullptr;
 	}
 
-	void Generate(int size, GLenum buffer) 
+	void Generate(int size, GLenum buffer)
 	{
 		this->size = size;
 		this->buffer = buffer;
@@ -540,7 +543,7 @@ public:
 	{
 		glBindBuffer(toWhat, this->id);
 	}
-	
+
 	void Copy(GLenum buffer, void* data, int size, GLenum drawType)
 	{
 		this->data = data;
@@ -567,13 +570,14 @@ public:
 	enum projectionMode { Perspective, Orthographic };
 	float FieldOfView = 90, FarClip = 1000, NearClip = 0.01f;
 	projectionMode ProjectionMode = projectionMode::Perspective;
-	
+
 	mat4 view = mat4(1), projection = mat4(1);
 
 	static Camera* main;
 
-	Camera() 
+	Camera()
 	{
+		this->BelongsToCamera = true;
 		this->ProjectionMode = projectionMode::Perspective;
 		this->FieldOfView = 90;
 		this->FarClip = 1000;
@@ -585,20 +589,21 @@ public:
 
 	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
 	{
+		this->BelongsToCamera = true;
 		this->ProjectionMode = mode;
-		
+
 		if (makeMain) main = this;
 		this->FieldOfView = fov;
 		this->FarClip = fc;
 		this->NearClip = nc;
 
 		this->view = mat4(1);
-		this->projection = mat4(1);	
+		this->projection = mat4(1);
 	}
 
 	void DoInput(GLFWwindow* window, float deltaTime)
 	{
-		UpdateDirections(true);
+		UpdateDirections();
 		float speed = 0.9f;
 		if (glfwGetKey(window, GLFW_KEY_W))
 		{
@@ -648,7 +653,7 @@ public:
 		view = rotate(view, euler.z, vec3(1, 0, 0));
 
 		view = translate(view, -position);
-		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
+		projection = perspective(radians(FieldOfView), float((width * 0.75) / (height * 0.75)), NearClip, FarClip);
 	}
 };
 
@@ -855,8 +860,8 @@ public:
 
 
 			float vertices[] = {
-				-0.5f, -0.5f, 0.0f, // left  
-				0.5f, -0.5f, 0.0f, // right 
+				-0.5f, -0.5f, 0.0f, // left
+				0.5f, -0.5f, 0.0f, // right
 				0.0f,  0.5f, 0.0f,
 			};
 
@@ -869,7 +874,7 @@ public:
 			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
-			
+
 			ResetState();
 		}
 	}
@@ -900,5 +905,20 @@ GLFWwindow* window;
 
 float deltaTime = 0, lastFrame = 0;
 
+void UpdateDeltaTime()
+{
+	float currentFrame = static_cast<float>(glfwGetTime());
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+}
+
+void UpdateTransforms()
+{
+	for (int i = Transform::ActiveTransforms.size() - 1; i >= 0; i--)
+	{
+		Transform::ActiveTransforms[i].UpdateDirections();
+		Transform::ActiveTransforms[i].UpdateMatrices();
+	}
+}
 
 #endif
