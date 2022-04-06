@@ -1,8 +1,16 @@
 #define _CRTDBG_MAP_ALLOC
-#include "headers/quickrender.h"
+#include "quickrender.h"
 #include <stdlib.h>
 #include <crtdbg.h>
 using namespace std;
+
+
+//declarations
+
+float deltaTime = 0, lastFrame = 0;
+Camera* Camera::main = nullptr;
+GLFWwindow* window;
+vector<GLObject> GLObject::objects = vector<GLObject>();
 
 int main()
 {
@@ -30,21 +38,35 @@ int main()
     tri2.scale = onevec;
     tri2.euler = vec3(0, 0, 0);
 
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_MULTISAMPLE);
+
+
+
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        UpdateDeltaTime();
-        UpdateTransforms();
+
+       float currentFrame = static_cast<float>(glfwGetTime());
+       deltaTime = currentFrame - lastFrame;
+       lastFrame = currentFrame;
+
+        if (glfwGetKey(window, GLFW_KEY_R))
+        {
+            tri.euler.z += speed * deltaTime;
+        }
 
         if (glfwGetKey(window, GLFW_KEY_UP))
         {
             tri2.position += tri2.forward * speed * deltaTime;
         }
+
         if (glfwGetKey(window, GLFW_KEY_DOWN))
         {
             tri2.position -= tri2.forward * speed * deltaTime;
         }
+
         if (glfwGetKey(window, GLFW_KEY_RIGHT))
         {
             tri2.euler.y -= speed * deltaTime;
@@ -54,14 +76,11 @@ int main()
             tri2.euler.y += speed * deltaTime;
         }
 
-        if (glfwGetKey(window, GLFW_KEY_R))
-        {
-            tri.euler.z += speed * deltaTime;
-        }
         if (glfwGetKey(window, GLFW_KEY_T))
         {
             tri2.euler.z -= speed * deltaTime;
         }
+
 
         cam.DoInput(window, deltaTime);
         tri.Draw(1);

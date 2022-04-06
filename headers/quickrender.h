@@ -1,13 +1,21 @@
 #ifndef QUICKRENDER_MAIN_HEADER
 #define QUICKRENDER_MAIN_HEADER
 
+#ifndef QR_SETTINGS
+#define QR_SETTINGS
+#define QR_USE_ASSIMP
 #define STB_IMAGE_IMPLEMENTATION
 
-#include "headers/glad/glad.h"
+int width = 800, height = 600;
+const char* const WINDOW_NAME = "test";
+
+#endif
+
+#include <glad.h>
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include "glfw3.h"
+#include <glfw3.h>
 #include <stdlib.h>
 #include <direct.h>
 #include <fstream>
@@ -15,109 +23,17 @@
 #include <sstream>
 #include <iostream>
 #include <stb_image.h>
+#include <quickerror.h>
+#include <quickdefines.h>
+#include <quickmacros.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#ifndef QUICKRENDER_MACROS
-#define QUICKRENDER_MACROS
-
-#define pragmatism __debugbreak();
-#define panic __debugbreak();
-
-#define uint unsigned int
-#define onevec vec3(1,1,1)
-#define zerovec vec3(0,0,0)
-#define cstring const char*
-
-static bool glPrintErrors(const char* function, const char* file, int line)
-{
-	using namespace std;
-	GLenum err = glGetError();
-	if (err != GL_NO_ERROR)
-	{
-		while (err != GL_NO_ERROR)
-		{
-			const char* strerror = "";
-			switch (err)
-			{
-			case 1280:
-				strerror = "Invalid enum";
-				break;
-			case 1281:
-				strerror = "Invalid value";
-				break;
-			case 1282:
-				strerror = "Invalid operation";
-				break;
-
-
-			case 1285:
-				strerror = "OpenGL ran out of memory";
-				break;
-			}
-
-			cout << strerror << " in function " << function << " in file " << file << " on line " << line << endl;
-			return false;
-		}
-	}
-	return true;
-}
-
-
-#define STOP_ON_FAILURE(x) if ((!x)) __debugbreak();
-
-#define glCall(x)\
-	x;\
-	STOP_ON_FAILURE(glPrintErrors(#x, __FILE__, __LINE__));
-
-void PrintErrors()
-{
-	using namespace std;
-	GLenum err = glGetError();
-
-	if (err == 0) return;
-
-	switch (err)
-	{
-	case 1280:
-		cout << "Error: 1280 - Invalid enum. Perhaps you used an enum where it shouldn't be?" << endl;
-		break;
-
-	case 1281:
-		cout << "Error: 1281 - Invalid value. Perhaps you passed the wrong type of data somewhere?" << endl;
-		break;
-
-	case 1282:
-		cout << "Error: 1282 - Invalid operation." << endl;
-		break;
-
-	case 1283:
-		cout << "Error: 1283 - stack overflow." << endl;
-		break;
-
-	case 1284:
-		cout << "Error: 1284 - stack... underflow? How the fuck did you even do that?" << endl;
-		break;
-
-	case 1285:
-		cout << "Error: 1285 - OpenGL ran out of memory." << endl;
-		break;
-
-	case 1286:
-		cout << "Error: 1286 - Invalid framebuffer read/write." << endl;
-		break;
-	}
-
-}
-
-#endif
-
 #ifndef QR_SETTINGS
 #define QR_SETTINGS
-
 int width = 800, height = 600;
-const char* WINDOW_NAME = "Game";
+const char* WINDOW_NAME = "test";
 
 #endif
 
@@ -132,7 +48,7 @@ const char* vertexShaderSource =
 "   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
 "}\0";
 
-const char* fragmentShaderSource =
+const char* fragmentShaderSource = 
 "#version 330 core\n"
 "out vec4 FragColor;\n"
 "uniform vec4 color;\n"
@@ -140,7 +56,6 @@ const char* fragmentShaderSource =
 "{\n"
 "   FragColor = color;\n"
 "}\n\0";
-
 
 using namespace std;
 using namespace glm;
@@ -158,8 +73,9 @@ char* GetWorkingDirectory()
 	return cCurrentPath;
 }
 
-string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
-string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
+const string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
+const string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
+
 #ifndef QR_PRIMITIVES
 #define QR_PRIMITIVES
 float PRIMITIVE_CUBE[] = {
@@ -206,8 +122,8 @@ float PRIMITIVE_CUBE[] = {
 	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 float PRIMITIVE_TRIANGLE[] = {
-				-0.5f, -0.5f, 0.0f, // left
-				0.5f, -0.5f, 0.0f, // right
+				-0.5f, -0.5f, 0.0f, // left  
+				0.5f, -0.5f, 0.0f, // right 
 				0.0f,  0.5f, 0.0f,
 };
 #endif
@@ -248,7 +164,7 @@ void MCheckMemory()
 GLFWwindow* glSetup()
 {
 	stbi_set_flip_vertically_on_load(true);
-
+	
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
@@ -273,19 +189,16 @@ GLFWwindow* glSetup()
 	glfwMakeContextCurrent(window);
 	gladLoadGL();
 
-	glfwSetCursorPosCallback(window, MouseCallback);
+
 	glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
 	glViewport(0, 0, width, height);
-
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_MULTISAMPLE);
 
 	return window;
 }
 
 class GLObject
 {
-
+	
 public:
 
 	uint id = -1;
@@ -323,7 +236,7 @@ void Cleanup()
 	glfwTerminate();
 }
 
-class Transform
+class Transform 
 {
 public:
 
@@ -334,12 +247,10 @@ public:
 	mat4 model = mat4(1.0f);
 
 	vec3 forward = zerovec, right = zerovec, up = zerovec;
-
-	bool BelongsToCamera;
-
-	void UpdateDirections()
+	
+	void UpdateDirections(bool forCamera = false)
 	{
-		if (BelongsToCamera)
+		if (forCamera)
 		{
 			forward.x = cos(euler.x) * sin(-euler.y);
 			forward.y = sin(euler.x);
@@ -366,7 +277,7 @@ public:
 		model = rotate(model, euler.x, vec3(1, 0, 0));
 		model = rotate(model, euler.y, vec3(0, 1, 0));
 		model = rotate(model, euler.z, vec3(0, 0, 1));
-
+		
 		model = glm::scale(model, scale);
 	}
 
@@ -543,7 +454,7 @@ public:
 	{
 		glBindBuffer(toWhat, this->id);
 	}
-
+	
 	void Copy(GLenum buffer, void* data, int size, GLenum drawType)
 	{
 		this->data = data;
@@ -570,14 +481,13 @@ public:
 	enum projectionMode { Perspective, Orthographic };
 	float FieldOfView = 90, FarClip = 1000, NearClip = 0.01f;
 	projectionMode ProjectionMode = projectionMode::Perspective;
-
+	
 	mat4 view = mat4(1), projection = mat4(1);
 
 	static Camera* main;
 
-	Camera()
+	Camera() 
 	{
-		this->BelongsToCamera = true;
 		this->ProjectionMode = projectionMode::Perspective;
 		this->FieldOfView = 90;
 		this->FarClip = 1000;
@@ -589,21 +499,20 @@ public:
 
 	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
 	{
-		this->BelongsToCamera = true;
 		this->ProjectionMode = mode;
-
+		
 		if (makeMain) main = this;
 		this->FieldOfView = fov;
 		this->FarClip = fc;
 		this->NearClip = nc;
 
 		this->view = mat4(1);
-		this->projection = mat4(1);
+		this->projection = mat4(1);	
 	}
 
 	void DoInput(GLFWwindow* window, float deltaTime)
 	{
-		UpdateDirections();
+		UpdateDirections(true);
 		float speed = 0.9f;
 		if (glfwGetKey(window, GLFW_KEY_W))
 		{
@@ -653,7 +562,7 @@ public:
 		view = rotate(view, euler.z, vec3(1, 0, 0));
 
 		view = translate(view, -position);
-		projection = perspective(radians(FieldOfView), float((width * 0.75) / (height * 0.75)), NearClip, FarClip);
+		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
 	}
 };
 
@@ -674,7 +583,7 @@ private:
 	Renderer(){}
 
 public:
-	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, Transform wo)
+	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
 	{
 		va.Bind();
 		bo.Bind(bo.buffer);
@@ -860,8 +769,8 @@ public:
 
 
 			float vertices[] = {
-				-0.5f, -0.5f, 0.0f, // left
-				0.5f, -0.5f, 0.0f, // right
+				-0.5f, -0.5f, 0.0f, // left  
+				0.5f, -0.5f, 0.0f, // right 
 				0.0f,  0.5f, 0.0f,
 			};
 
@@ -874,7 +783,7 @@ public:
 			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
-
+			
 			ResetState();
 		}
 	}
@@ -897,28 +806,100 @@ public:
 	}
 };
 
-vector<GLObject> GLObject::objects = vector<GLObject>();
-vector<Transform> Transform::ActiveTransforms = vector<Transform>();
+struct Color
+{
+public: 
+	float r, g, b, a;
+
+	Color operator = (Color& col)
+	{
+		this->r = col.r;
+		this->g = col.g;
+		this->b = col.b;
+		this->a = col.a;
+	}
+
+	Color operator + (Color& col)
+	{
+		this->r += col.r;
+		this->g += col.g;
+		this->b += col.b;
+		this->a += col.a;
+	}
+
+	Color operator - (Color& col)
+	{
+		this->r -= col.r;
+		this->g -= col.g;
+		this->b -= col.b;
+		this->a -= col.a;
+	}
+
+	static Color red;
+	static Color blue;
+	static Color white;
+	static Color green;
+	static Color transparent;
+};
+
+Color Color::red = { 1, 0, 0, 1 };
+Color Color::blue = { 0, 0, 1, 1 };
+Color Color::white = { 1, 1, 1, 1 };
+Color Color::green = { 0, 1, 0, 1 };
+Color Color::transparent = { 1, 1, 1, 0 };
 
 Camera* Camera::main = nullptr;
 GLFWwindow* window;
+vector<GLObject> GLObject::objects = vector<GLObject>();
 
 float deltaTime = 0, lastFrame = 0;
 
-void UpdateDeltaTime()
+class Light : public WorldObject
 {
-	float currentFrame = static_cast<float>(glfwGetTime());
-	deltaTime = currentFrame - lastFrame;
-	lastFrame = currentFrame;
-}
+public:
+	Color color;
+	float strength = 1, range = 5;
+};
 
-void UpdateTransforms()
+class Mesh
 {
-	for (int i = Transform::ActiveTransforms.size() - 1; i >= 0; i--)
+public:
+	struct Vertex
 	{
-		Transform::ActiveTransforms[i].UpdateDirections();
-		Transform::ActiveTransforms[i].UpdateMatrices();
+	public:
+		vec3 Position, Normal;
+		vec2 TextureCoordinates;
+	};
+
+	struct Texture
+	{
+	public:
+		uint id;
+		string type;
+	};
+
+	BufferObject VertexBuffer, ElementBuffer;
+	VertexArrayObject VAO;
+
+	vector<Vertex> vertices;
+	vector<uint> indices;
+	vector<Texture> textures;
+
+	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures);
+
+	void setup()
+	{
+		VAO = VertexArrayObject();
+		VAO.Generate(1);
+		
+		VertexBuffer = BufferObject();
+		VertexBuffer.Generate(1, GL_ARRAY_BUFFER);
+
+		ElementBuffer = BufferObject();
+		ElementBuffer.Generate(1, GL_ELEMENT_ARRAY_BUFFER);
+
+
 	}
-}
+};
 
 #endif
