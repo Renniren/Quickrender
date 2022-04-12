@@ -2,7 +2,9 @@
 #define QUICKRENDER_MAIN_HEADER
 
 #ifndef QR_SETTINGS
+
 #define QR_SETTINGS
+
 #define QR_USE_ASSIMP
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -15,47 +17,23 @@ const char* const WINDOW_NAME = "test";
 #include <string>
 #include <vector>
 #include <stdio.h>
-#include <glfw3.h>
 #include <stdlib.h>
+#include <glfw3.h>
 #include <direct.h>
 #include <fstream>
 #include <glm.hpp>
 #include <sstream>
 #include <iostream>
 #include <stb_image.h>
-#include <quickerror.h>
-#include <quickdefines.h>
-#include <quickmacros.h>
+#include <assimp/scene.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#ifndef QR_SETTINGS
-#define QR_SETTINGS
-int width = 800, height = 600;
-const char* WINDOW_NAME = "test";
-
+#ifdef  QR_USE_ASSIMP
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
 #endif
-
-const char* vertexShaderSource =
-"#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
-"}\0";
-
-const char* fragmentShaderSource = 
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"uniform vec4 color;\n"
-"void main()\n"
-"{\n"
-"   FragColor = color;\n"
-"}\n\0";
 
 using namespace std;
 using namespace glm;
@@ -75,9 +53,128 @@ char* GetWorkingDirectory()
 
 const string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
 const string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
+const string MODELS_DIRECTORY = string(GetWorkingDirectory()) + string("\\models\\");
+
+
+#ifndef QUICKRENDER_MACROS
+#define QUICKRENDER_MACROS
+
+//this exists purely because I'm too lazy to type out certain shit
+#define panic __debugbreak();
+
+void PrintErrors()
+{
+	using namespace std;
+	GLenum err = glGetError();
+
+	if (err == 0) return;
+
+	switch (err)
+	{
+	case 1280:
+		cout << "Error: 1280 - Invalid enum. Perhaps you used an enum where it shouldn't be?" << endl;
+		break;
+
+	case 1281:
+		cout << "Error: 1281 - Invalid value. Perhaps you passed the wrong type of data somewhere?" << endl;
+		break;
+
+	case 1282:
+		cout << "Error: 1282 - Invalid operation." << endl;
+		break;
+
+	case 1283:
+		cout << "Error: 1283 - stack overflow." << endl;
+		break;
+
+	case 1284:
+		cout << "Error: 1284 - stack... underflow? How the fuck did you even do that?" << endl;
+		break;
+
+	case 1285:
+		cout << "Error: 1285 - OpenGL ran out of memory." << endl;
+		break;
+
+	case 1286:
+		cout << "Error: 1286 - Invalid framebuffer read/write." << endl;
+		break;
+	}
+
+}
+
+
+#define uint unsigned int
+#define onevec vec3(1,1,1)
+#define zerovec vec3(0,0,0)
+#define cstring const char*
+
+static bool glPrintErrors(const char* function, const char* file, int line)
+{
+	using namespace std;
+	GLenum err = glGetError();
+	if (err != GL_NO_ERROR)
+	{
+		while (err != GL_NO_ERROR)
+		{
+			const char* strerror = "";
+			switch (err)
+			{
+			case 1280:
+				strerror = "Invalid enum";
+				break;
+			case 1281:
+				strerror = "Invalid value";
+				break;
+			case 1282:
+				strerror = "Invalid operation";
+				break;
+
+
+			case 1285:
+				strerror = "OpenGL ran out of memory";
+				break;
+			}
+
+			cout << strerror << " in function " << function << " in file " << file << " on line " << line << endl;
+			return false;
+		}
+	}
+	return true;
+}
+
+
+#define STOP_ON_FAILURE(x) if ((!x)) __debugbreak();
+
+#define glCall(x)\
+	x;\
+	STOP_ON_FAILURE(glPrintErrors(#x, __FILE__, __LINE__));
+
+#endif
 
 #ifndef QR_PRIMITIVES
 #define QR_PRIMITIVES
+
+const char* vertexShaderSource =
+"#version 330 core\n"
+"layout (location = 0) in vec3 aPos;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main()\n"
+"{\n"
+"   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
+"}\0";
+
+const char* fragmentShaderSource =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"uniform vec4 color;\n"
+"void main()\n"
+"{\n"
+"   FragColor = color;\n"
+"}\n\0";
+
+
 float PRIMITIVE_CUBE[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -128,7 +225,7 @@ float PRIMITIVE_TRIANGLE[] = {
 };
 #endif
 
-void ResetState()
+void glResetState()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindTexture(GL_TEXTURE_1D, 0);
@@ -164,7 +261,7 @@ void MCheckMemory()
 GLFWwindow* glSetup()
 {
 	stbi_set_flip_vertically_on_load(true);
-	
+
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
@@ -198,7 +295,7 @@ GLFWwindow* glSetup()
 
 class GLObject
 {
-	
+
 public:
 
 	uint id = -1;
@@ -236,36 +333,36 @@ void Cleanup()
 	glfwTerminate();
 }
 
-class Transform 
+class WorldObject
 {
 public:
 
 	vec3 position = zerovec;
-	vec3 euler = zerovec;
+	vec3 rotation = zerovec;
 	vec3 scale = zerovec;
 
 	mat4 model = mat4(1.0f);
 
-	vec3 forward = zerovec, right = zerovec, up = zerovec;
-	
+	vec3 forward = zerovec, right = zerovec, up = zerovec, direction = zerovec;
+
 	void UpdateDirections(bool forCamera = false)
 	{
 		if (forCamera)
 		{
-			forward.x = cos(euler.x) * sin(-euler.y);
-			forward.y = sin(euler.x);
-			forward.z = cos(euler.x) * cos(-euler.y);
+			forward.x = cos(rotation.x) * sin(-rotation.y);
+			forward.y = sin(rotation.z);
+			forward.z = cos(rotation.x) * cos(-rotation.y);
 		}
 		else
 		{
-			forward.x = cos(euler.x) * sin(euler.y);
-			forward.y = sin(euler.x);
-			forward.z = cos(euler.x) * cos(euler.y);
+			forward.x = cos(-rotation.x) * sin(rotation.y);
+			forward.y = sin(rotation.x);
+			forward.z = cos(-rotation.x) * cos(rotation.y);
 		}
 
-		right.x = cos(euler.y);
+		right.x = cos(rotation.y);
 		right.y = 0;
-		right.z = sin(euler.y);
+		right.z = sin(rotation.y);
 
 		up = cross(forward, right);
 	}
@@ -274,16 +371,14 @@ public:
 	{
 		model = translate(model, -position);
 
-		model = rotate(model, euler.x, vec3(1, 0, 0));
-		model = rotate(model, euler.y, vec3(0, 1, 0));
-		model = rotate(model, euler.z, vec3(0, 0, 1));
-		
+		model = rotate(model, rotation.x, vec3(1, 0, 0));
+		model = rotate(model, rotation.y, vec3(0, 1, 0));
+		model = rotate(model, rotation.z, vec3(0, 0, 1));
+
 		model = glm::scale(model, scale);
 	}
 
-	Transform* wobj = this;
-
-	static vector<Transform> ActiveTransforms;
+	WorldObject* wobj = this;
 };
 
 class Shader : public GLObject
@@ -293,18 +388,26 @@ public:
 	cstring SourceCode = "";
 	GLenum type = 0;
 
+	Shader()
+	{
+
+	}
+
 	Shader(cstring code, GLenum type)
 	{
 		this->SourceCode = code;
 		this->type = type;
+	}
+	
+	void SetType(GLenum t)
+	{
+		this->type = t;
 	}
 
 	void CreateShader()
 	{
 		this->id = glCreateShader(this->type);
 	}
-
-
 
 	void LinkCode(cstring code)
 	{
@@ -369,7 +472,6 @@ public:
 		initialized = true;
 	}
 
-
 	void UseProgram() const
 	{
 		glUseProgram(this->id);
@@ -414,8 +516,12 @@ public:
 		glGenVertexArrays(size, &this->id);
 	}
 
-
 	void Bind()
+	{
+		glBindVertexArray(this->id);
+	}
+
+	void Unbind()
 	{
 		glBindVertexArray(this->id);
 	}
@@ -454,7 +560,7 @@ public:
 	{
 		glBindBuffer(toWhat, this->id);
 	}
-	
+
 	void Copy(GLenum buffer, void* data, int size, GLenum drawType)
 	{
 		this->data = data;
@@ -471,22 +577,30 @@ public:
 	{
 		glDeleteBuffers(size, &id);
 	}
+
+	static void UnbindBuffers(GLenum target)
+	{
+		glBindBuffer(target, 0);
+	}
+
+	void UnbindBuffer()
+	{
+		glBindBuffer(this->buffer, 0);
+	}
 };
 
-class Camera : public Transform
+class Camera : public WorldObject
 {
-protected:
-
 public:
 	enum projectionMode { Perspective, Orthographic };
 	float FieldOfView = 90, FarClip = 1000, NearClip = 0.01f;
-	projectionMode ProjectionMode = projectionMode::Perspective;
-	
+	Camera::projectionMode ProjectionMode = Camera::projectionMode::Perspective;
+
 	mat4 view = mat4(1), projection = mat4(1);
 
 	static Camera* main;
 
-	Camera() 
+	Camera()
 	{
 		this->ProjectionMode = projectionMode::Perspective;
 		this->FieldOfView = 90;
@@ -500,14 +614,14 @@ public:
 	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
 	{
 		this->ProjectionMode = mode;
-		
+
 		if (makeMain) main = this;
 		this->FieldOfView = fov;
 		this->FarClip = fc;
 		this->NearClip = nc;
 
 		this->view = mat4(1);
-		this->projection = mat4(1);	
+		this->projection = mat4(1);
 	}
 
 	void DoInput(GLFWwindow* window, float deltaTime)
@@ -546,27 +660,27 @@ public:
 
 		if (glfwGetKey(window, GLFW_KEY_C))
 		{
-			euler.y += speed * deltaTime;
+			rotation.y += speed * deltaTime;
 		}
 
 		if (glfwGetKey(window, GLFW_KEY_Z))
 		{
-			euler.y -= speed * deltaTime;
+			rotation.y -= speed * deltaTime;
 		}
 	}
 
 	void UpdateCameraMatrices()
 	{
-		view = rotate(view, euler.x, vec3(0, 0, 1));
-		view = rotate(view, euler.y, vec3(0, 1, 0));
-		view = rotate(view, euler.z, vec3(1, 0, 0));
+		view = rotate(view, rotation.x, vec3(0, 0, 1));
+		view = rotate(view, rotation.y, vec3(0, 1, 0));
+		view = rotate(view, rotation.z, vec3(1, 0, 0));
 
 		view = translate(view, -position);
 		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
 	}
 };
 
-void ApplyPerspective(Camera source, ShaderProgram pro, Transform obj)
+void ApplyPerspective(Camera source, ShaderProgram pro, WorldObject obj)
 {
 	pro.UseProgram();
 	obj.UpdateMatrices();
@@ -580,9 +694,14 @@ void ApplyPerspective(Camera source, ShaderProgram pro, Transform obj)
 class Renderer
 {
 private:
-	Renderer(){}
+	Renderer() {}
 
 public:
+	static void DrawLights(ShaderProgram pro)
+	{
+
+	}
+
 	static void Draw(VertexArrayObject va, ShaderProgram pro, BufferObject bo, WorldObject wo)
 	{
 		va.Bind();
@@ -591,9 +710,8 @@ public:
 		ApplyPerspective(*Camera::main, pro, wo);
 
 		glDrawArrays(GL_TRIANGLES, 0, bo.size);
-		ResetState();
+		glResetState();
 	}
-
 };
 
 class VertexAttribute
@@ -611,8 +729,8 @@ public:
 		this->type = type;
 		this->normalize = normalize;
 		this->stride = stride;
-		glVertexAttribPointer(position, size, type, normalize, stride, (void*)offset);
 		glEnableVertexAttribArray(position);
+		glVertexAttribPointer(position, size, type, normalize, stride, (void*)offset);
 	}
 };
 
@@ -621,6 +739,7 @@ class Texture : public GLObject
 public:
 	void* texData;
 	int width, height, MipmapLevel;
+	vector<string> tags;
 
 	GLenum target, format, imageFormat, datatype;
 
@@ -667,7 +786,7 @@ Texture* LoadTexture(string path, GLenum target)
 {
 	Texture* tex = new Texture();
 	int height, width, numChannels;
-	unsigned char *data = stbi_load(path.c_str(), &width, &height, &numChannels, 0);
+	unsigned char* data = stbi_load(path.c_str(), &width, &height, &numChannels, 0);
 
 	GLenum format = GL_RGB;
 
@@ -685,7 +804,7 @@ Texture* LoadTexture(string path, GLenum target)
 	return tex;
 }
 
-class Cube : public Transform
+class Cube : public WorldObject
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
@@ -723,7 +842,7 @@ public:
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float));
 			VertexAttribute(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (3 * sizeof(float)));
 			PrintErrors();
-			ResetState();
+			glResetState();
 		}
 	}
 
@@ -745,7 +864,7 @@ public:
 	}
 };
 
-class Triangle : public Transform
+class Triangle : public WorldObject
 {
 public:
 	VertexArrayObject* VAO = new VertexArrayObject();
@@ -783,8 +902,8 @@ public:
 			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float));
-			
-			ResetState();
+
+			glResetState();
 		}
 	}
 
@@ -808,7 +927,7 @@ public:
 
 struct Color
 {
-public: 
+public:
 	float r, g, b, a;
 
 	Color operator = (Color& col)
@@ -851,15 +970,63 @@ Color Color::transparent = { 1, 1, 1, 0 };
 Camera* Camera::main = nullptr;
 GLFWwindow* window;
 vector<GLObject> GLObject::objects = vector<GLObject>();
+vector<Texture> ActiveTextures = vector<Texture>();
 
 float deltaTime = 0, lastFrame = 0;
 
 class Light : public WorldObject
 {
 public:
-	Color color;
+	enum lightType { Point, Spotlight, Sun };
+	Light::lightType Type = Light::lightType::Point;
+
+	Color color = Color::white;
 	float strength = 1, range = 5;
 };
+
+#ifdef QR_USE_ASSIMP
+
+#endif
+
+unsigned int TextureFromFile(const char* path, const string& directory, bool gamma = true)
+{
+	string filename = string(path);
+	filename = directory + '/' + filename;
+
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+
+	int width, height, nrComponents;
+	unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+	if (data)
+	{
+		GLenum format;
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3)
+			format = GL_RGB;
+		else if (nrComponents == 4)
+			format = GL_RGBA;
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+		stbi_image_free(data);
+	}
+
+	return textureID;
+}
 
 class Mesh
 {
@@ -867,17 +1034,19 @@ public:
 	struct Vertex
 	{
 	public:
-		vec3 Position, Normal;
+		vec3 Position, Normal, Tangent, BiTangent;
 		vec2 TextureCoordinates;
+
+		int BoneIDs[4], Weights[4];
 	};
 
 	struct Texture
 	{
 	public:
 		uint id;
-		string type;
+		string type, path;
 	};
-
+	
 	BufferObject VertexBuffer, ElementBuffer;
 	VertexArrayObject VAO;
 
@@ -885,21 +1054,234 @@ public:
 	vector<uint> indices;
 	vector<Texture> textures;
 
-	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures);
+	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
+	{
+		this->vertices = vertices;
+		this->indices = indices;
+		this->textures = textures;
+		setup();
+	}
 
 	void setup()
 	{
 		VAO = VertexArrayObject();
 		VAO.Generate(1);
-		
+		VAO.Bind();
+
 		VertexBuffer = BufferObject();
 		VertexBuffer.Generate(1, GL_ARRAY_BUFFER);
+		VertexBuffer.Copy(GL_ARRAY_BUFFER, &vertices[0], vertices.size() * sizeof(Vertex), GL_STATIC_DRAW);
 
 		ElementBuffer = BufferObject();
 		ElementBuffer.Generate(1, GL_ELEMENT_ARRAY_BUFFER);
+		ElementBuffer.Copy(GL_ELEMENT_ARRAY_BUFFER, &indices[0], indices.size() * sizeof(uint), GL_STATIC_DRAW);
 
+		VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+		VertexAttribute(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, Normal));
+		VertexAttribute(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), offsetof(Vertex, TextureCoordinates));
 
+		VAO.Unbind();
+	}
+
+	void draw(ShaderProgram shader)
+	{
+		uint spec_number = 1, diffuse_number = 1;
+		for (uint i = 0; i < textures.size(); i++)
+		{
+			glActiveTexture(GL_TEXTURE0 + i); 
+			string number;
+			string name = textures[i].type;
+			if (name == "texture_diffuse")
+				number = std::to_string(diffuse_number++);
+			else if (name == "texture_specular")
+				number = std::to_string(spec_number++);
+
+			shader.setFloat(("material." + name + number).c_str(), i);
+			glBindTexture(GL_TEXTURE_2D, textures[i].id);
+		}
+		glActiveTexture(GL_TEXTURE0);
+
+		// draw mesh
+		VAO.Bind();
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
 	}
 };
+
+vector<Mesh::Texture> ActiveMeshTextures = vector<Mesh::Texture>();
+
+class Model
+{
+public:
+    vector<Mesh> meshes;
+    string directory;
+	
+	void LoadModel(string path)
+	{
+		Assimp::Importer import;
+		const aiScene* scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+
+		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+		{
+			cout << "Assimp Error: " << import.GetErrorString() << endl;
+			return;
+		}
+		directory = path.substr(0, path.find_last_of('/'));
+
+		processNode(scene->mRootNode, scene);
+	}
+
+	Model(){}
+
+	Model(const char* path)
+	{
+		LoadModel(string(path));
+	}
+
+	void Draw(ShaderProgram& shader)
+	{
+		for (unsigned int i = 0; i < meshes.size(); i++)
+			meshes[i].draw(shader);
+	}
+
+private:
+    // model data
+
+    void processNode(aiNode* node, const aiScene* scene)
+	{
+		// process all the node's meshes (if any)
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			meshes.push_back(processMesh(mesh, scene));
+		}
+
+		// then do the same for each of its children
+		for (unsigned int i = 0; i < node->mNumChildren; i++)
+		{
+			processNode(node->mChildren[i], scene);
+		}
+	}
+
+	Mesh processMesh(aiMesh* mesh, const aiScene* scene)
+	{
+		vector<Mesh::Vertex> vertices;
+		vector<unsigned int> indices;
+		vector<Mesh::Texture> textures;
+
+		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+		{
+			Mesh::Vertex vertex;
+			glm::vec3 vector;
+			vector.x = mesh->mVertices[i].x;
+			vector.y = mesh->mVertices[i].y;
+			vector.z = mesh->mVertices[i].z;
+			vertex.Position = vector;
+
+			vector.x = mesh->mNormals[i].x;
+			vector.y = mesh->mNormals[i].y;
+			vector.z = mesh->mNormals[i].z;
+			vertex.Normal = vector;
+
+			if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+			{
+				glm::vec2 vec;
+				vec.x = mesh->mTextureCoords[0][i].x;
+				vec.y = mesh->mTextureCoords[0][i].y;
+				vertex.TextureCoordinates = vec;
+			}
+			else
+				vertex.TextureCoordinates = glm::vec2(0.0f, 0.0f);
+
+			vertices.push_back(vertex);
+		}
+
+		for (uint i = 0; i < mesh->mNumFaces; i++)
+		{
+			aiFace face = mesh->mFaces[i];
+			for (uint j = 0; j < face.mNumIndices; j++)
+				indices.push_back(face.mIndices[j]);
+		}
+
+		// process material
+
+		if (mesh->mMaterialIndex >= 0)
+		{
+			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+			vector<Mesh::Texture> diffuseMaps = loadMaterialTextures(material,
+				aiTextureType_DIFFUSE, "texture_diffuse");
+			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+			vector<Mesh::Texture> specularMaps = loadMaterialTextures(material,
+				aiTextureType_SPECULAR, "texture_specular");
+			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+		}
+
+		return Mesh(vertices, indices, textures);
+	}
+
+	vector<Mesh::Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
+	{
+		vector<Mesh::Texture> textures;
+		for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+		{
+			aiString str;
+			mat->GetTexture(type, i, &str);
+			bool skip = false;
+			for (unsigned int j = 0; j < ActiveMeshTextures.size(); j++)
+			{
+				if (std::strcmp(ActiveMeshTextures[j].path.data(), str.C_Str()) == 0)
+				{
+					textures.push_back(ActiveMeshTextures[j]);
+					skip = true;
+					break;
+				}
+			}
+			if (!skip)
+			{   // if texture hasn't been loaded already, load it
+				Mesh::Texture texture;
+				texture.id = TextureFromFile(str.C_Str(), directory);
+				texture.type = typeName;
+				texture.path = str.C_Str();
+				textures.push_back(texture);
+				ActiveMeshTextures.push_back(texture); // add to loaded textures
+			}
+		}
+		return textures;
+	}
+};
+
+class WorldMesh
+{
+public:
+	Model model;
+	ShaderProgram program = ShaderProgram();
+	Shader vert = Shader(), frag = Shader();
+	WorldObject transform = WorldObject();
+
+	WorldMesh(string path)
+	{
+		vert.CreateShader();
+		vert.SetType(GL_VERTEX_SHADER);
+		vert.LinkCodeWithPath(SHADERS_DIRECTORY + string("vertexTextured.glsl"));
+		vert.Compile();
+
+		frag.CreateShader();
+		frag.SetType(GL_FRAGMENT_SHADER);
+		frag.LinkCodeWithPath(SHADERS_DIRECTORY + string("fragmentTextured.glsl"));
+		frag.Compile();
+
+		program.InitializeProgram({ frag, vert });
+		model = Model(path.c_str());
+	}
+
+	void render()
+	{
+		for (int i = 0; i < model.meshes.size(); i++)
+		{
+			glCall(Renderer::Draw(model.meshes[i].VAO, program, model.meshes[i].VertexBuffer, transform));
+		}
+	}
+};
+
 
 #endif

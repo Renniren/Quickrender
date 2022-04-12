@@ -1,16 +1,4 @@
-#define _CRTDBG_MAP_ALLOC
-#include "quickrender.h"
-#include <stdlib.h>
-#include <crtdbg.h>
-using namespace std;
-
-
-//declarations
-
-float deltaTime = 0, lastFrame = 0;
-Camera* Camera::main = nullptr;
-GLFWwindow* window;
-vector<GLObject> GLObject::objects = vector<GLObject>();
+#include <quickrender.h>
 
 int main()
 {
@@ -25,23 +13,24 @@ int main()
     cam.FarClip = 9000.0f;
     cam.NearClip = 0.01f;
 
-    cam.position = vec3(0, -3, 0);
-
+    cam.position = vec3(0, -3, 5);
+    
     tri.Initialize(0);
-    tri.euler = vec3(0, 0, 0);
+    tri.rotation = vec3(0, 0, 0);
     tri.position = vec3(0, 1, 0);
     tri.scale = vec3(1, 1, 1);
-    cam.position = vec3(0, 0, 5);
 
     tri2.Initialize(0);
     tri2.position = vec3(0, 3, 0);
     tri2.scale = onevec;
-    tri2.euler = vec3(0, 0, 0);
+    tri2.rotation = vec3(0, 0, 0);
 
+    WorldMesh mesh = WorldMesh((MODELS_DIRECTORY + "backpack\\backpack.obj").c_str());
+    mesh.transform.scale = vec3(0.01f, 0.01f, 0.01f);
+    mesh.transform.position = vec3(0.0f, 0.0f, -6);
+    
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_MULTISAMPLE);
-
-
 
     while (!glfwWindowShouldClose(window))
     {
@@ -54,7 +43,7 @@ int main()
 
         if (glfwGetKey(window, GLFW_KEY_R))
         {
-            tri.euler.z += speed * deltaTime;
+            tri.rotation.z += speed * deltaTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_UP))
@@ -69,22 +58,23 @@ int main()
 
         if (glfwGetKey(window, GLFW_KEY_RIGHT))
         {
-            tri2.euler.y -= speed * deltaTime;
+            tri2.rotation.y -= speed * deltaTime;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT))
         {
-            tri2.euler.y += speed * deltaTime;
+            tri2.rotation.y += speed * deltaTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_T))
         {
-            tri2.euler.z -= speed * deltaTime;
+            mesh.render();
+            tri2.rotation.z -= speed * deltaTime;
         }
-
 
         cam.DoInput(window, deltaTime);
         tri.Draw(1);
         tri2.Draw(1);
+        
 
         glfwSwapBuffers(window);
         glfwPollEvents();
