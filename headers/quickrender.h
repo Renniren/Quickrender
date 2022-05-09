@@ -147,7 +147,7 @@ static bool glPrintErrors(const char* function, const char* file, int line)
 
 #define glCall(x)\
 	x;\
-	STOP_ON_FAILURE(glPrintErrors(#x, __FILE__, __LINE__));
+	STOP_ON_FAILURE(glPrintErrors(#x, __FILE__, __LINE__));\
 
 #endif
 
@@ -338,16 +338,18 @@ class WorldObject
 public:
 
 	vec3 position = zerovec;
-	vec3 rotation = zerovec;
+	quat rotation = quat(0, 0, 0, 0);
 	vec3 scale = zerovec;
 
 	mat4 model = mat4(1.0f);
 
-	vec3 forward = zerovec, right = zerovec, up = zerovec, direction = zerovec;
+	vec3 forward = zerovec, right = zerovec, up = zerovec;
 
-	void UpdateDirections(bool forCamera = false)
+	bool BelongsToCamera = false;
+
+	void UpdateDirections(bool cam = false)
 	{
-		if (forCamera)
+		if (cam)
 		{
 			forward.x = cos(rotation.x) * sin(-rotation.y);
 			forward.y = sin(rotation.z);
@@ -369,11 +371,21 @@ public:
 
 	void UpdateMatrices()
 	{
-		model = translate(model, -position);
-
-		model = rotate(model, rotation.x, vec3(1, 0, 0));
-		model = rotate(model, rotation.y, vec3(0, 1, 0));
-		model = rotate(model, rotation.z, vec3(0, 0, 1));
+		UpdateDirections();
+		if (BelongsToCamera)
+		{
+			model = translate(model, position);
+			model = rotate(model, rotation.x, right);
+			model = rotate(model, rotation.y, up);
+			model = rotate(model, rotation.z, forward);
+		}
+		else
+		{
+			model = translate(model, position);
+			model = rotate(model, rotation.x, right);
+			model = rotate(model, rotation.y, up);
+			model = rotate(model, rotation.z, forward);
+		}
 
 		model = glm::scale(model, scale);
 	}
@@ -709,7 +721,8 @@ public:
 		pro.UseProgram();
 		ApplyPerspective(*Camera::main, pro, wo);
 
-		glDrawArrays(GL_TRIANGLES, 0, bo.size);
+		if(bo.buffer == GL_ARRAY_BUFFER) glDrawArrays(GL_TRIANGLES, 0, bo.size);
+		if(bo.buffer == GL_ELEMENT_ARRAY_BUFFER) glDrawElements(GL_TRIANGLES, bo.size, GL_FLOAT, 0);
 		glResetState();
 	}
 };
@@ -1096,7 +1109,7 @@ public:
 			else if (name == "texture_specular")
 				number = std::to_string(spec_number++);
 
-			shader.setFloat(("material." + name + number).c_str(), i);
+			shader.setFloat((name + number).c_str(), i);
 			glBindTexture(GL_TEXTURE_2D, textures[i].id);
 		}
 		glActiveTexture(GL_TEXTURE0);
@@ -1110,11 +1123,14 @@ public:
 
 vector<Mesh::Texture> ActiveMeshTextures = vector<Mesh::Texture>();
 
-class Model
+class Model : public WorldObject
 {
 public:
-    vector<Mesh> meshes;
-    string directory;
+	vector<Mesh> meshes;
+	string directory;
+
+	ShaderProgram program = ShaderProgram();
+	Shader vert = Shader(), frag = Shader();
 	
 	void LoadModel(string path)
 	{
@@ -1133,21 +1149,37 @@ public:
 
 	Model(){}
 
-	Model(const char* path)
+	Model(cstring path, cstring directory)
 	{
+		this->directory = directory;
+
+		vert.CreateShader();
+		vert.SetType(GL_VERTEX_SHADER);
+		vert.LinkCodeWithPath(SHADERS_DIRECTORY + string("vertexTextured.glsl"));
+		vert.Compile();
+
+		frag.CreateShader();
+		frag.SetType(GL_FRAGMENT_SHADER);
+		frag.LinkCodeWithPath(SHADERS_DIRECTORY + string("fragmentTextured.glsl"));
+		frag.Compile();
+
+		program.InitializeProgram({ frag, vert });
 		LoadModel(string(path));
+
 	}
 
-	void Draw(ShaderProgram& shader)
+	void Draw()
 	{
-		for (unsigned int i = 0; i < meshes.size(); i++)
-			meshes[i].draw(shader);
+		for (unsigned int i = 0; i < meshes.size(); i++) 
+		{
+			glCall(Renderer::Draw(meshes[i].VAO, this->program, meshes[i].ElementBuffer, *wobj));
+		}
 	}
 
 private:
-    // model data
+	// model data
 
-    void processNode(aiNode* node, const aiScene* scene)
+	void processNode(aiNode* node, const aiScene* scene)
 	{
 		// process all the node's meshes (if any)
 		for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -1271,7 +1303,7 @@ public:
 		frag.Compile();
 
 		program.InitializeProgram({ frag, vert });
-		model = Model(path.c_str());
+		//model = Model(path.c_str());
 	}
 
 	void render()
