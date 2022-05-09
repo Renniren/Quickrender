@@ -3,7 +3,8 @@ An idiot-proof object-oriented abstraction layer for OpenGL.
 
 I found that OpenGL can be a mite clunky to work with, so I sought to make myself a simple 3D renderer with the API. 
 I designed it with the intention of it being as simple as possible to import and use. 
-Most code here is adapted from LearnOpenGL.com, with optimizations whereever I thought were necessary.
+Most code here is adapted from LearnOpenGL.com, with optimizations wherever I thought were necessary.
+Not recommended for production use in its current state. I barely even have textures working, and much of the architecture of the renderer still needs to be laid out.
 
 # Usage
 Place quickrender.h in your project.
