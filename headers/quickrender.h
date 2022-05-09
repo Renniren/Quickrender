@@ -248,16 +248,6 @@ void MouseCallback(GLFWwindow* window, double x, double y)
 
 }
 
-void MSetupMemoryChecks()
-{
-	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
-}
-
-void MCheckMemory()
-{
-	_CrtDumpMemoryLeaks();
-}
-
 GLFWwindow* glSetup()
 {
 	stbi_set_flip_vertically_on_load(true);
@@ -348,7 +338,7 @@ void Cleanup()
 	glfwTerminate();
 }
 
-class WorldObject
+class WorldObject : public GLObject
 {
 public:
 
@@ -527,7 +517,6 @@ public:
 			up
 		);
 
-		
 		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
 	}
 };
@@ -539,10 +528,7 @@ public:
 	cstring SourceCode = "";
 	GLenum type = 0;
 
-	Shader()
-	{
-
-	}
+	Shader(){}
 
 	Shader(cstring code, GLenum type)
 	{
@@ -606,7 +592,7 @@ public:
 	vector<Shader> linkedShaders;
 	bool initialized;
 
-	void InitializeProgram(vector<Shader> shaders)
+	void InitializeProgram(const vector<Shader>& shaders)
 	{
 		if (initialized)
 		{
@@ -618,6 +604,7 @@ public:
 		for (int i = 0; i < shaders.size(); i++)
 		{
 			glAttachShader(this->id, shaders[i].id);
+			linkedShaders.push_back(shaders[i]);
 		}
 		glLinkProgram(this->id);
 		initialized = true;
@@ -628,7 +615,9 @@ public:
 		glUseProgram(this->id);
 	}
 
-	void setFloat(const string name, const float& number) const
+	//There should be more of these uniform setters. I write them as I go along, really.
+
+	void setFloat(const string& name, const float& number) const
 	{
 		glUseProgram(id);
 		glUniform1f(glGetUniformLocation(this->id, name.c_str()), number);
@@ -826,10 +815,7 @@ public:
 
 		this->height = height;
 		this->width = width;
-
 		this->texData = data;
-
-
 
 		glBindTexture(target, id);
 		glTexImage2D(target, mipmaplevel, imageformat, width, height, 0, format, datatype, data);
