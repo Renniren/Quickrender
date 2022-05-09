@@ -2,8 +2,9 @@
 
 int main()
 {
+	InitializeRenderer;
 	float speed = 0.9f;
-	window = glSetup();
+	
 
 	Camera cam = Camera(Camera::projectionMode::Perspective, true);
 	Triangle tri = Triangle();
@@ -71,6 +72,7 @@ int main()
 			tri2.rotation.z -= speed * deltaTime;
 		}
 
+		cam.UpdateCameraMatrices();
 		cam.DoInput(window, deltaTime);
 		tri.Draw(1);
 		tri2.Draw(1);

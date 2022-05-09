@@ -293,6 +293,21 @@ GLFWwindow* glSetup()
 	return window;
 }
 
+#define InitializeRenderer window = glSetup()
+
+void qclamp(int* value, int lower, int upper)
+{
+	if (*value > upper) *value = upper;
+	if (*value < lower) *value = lower;
+}
+
+float qclamp(float value, float lower, float upper)
+{
+	if (value > upper) value = upper;
+	if (value < lower) value = lower;
+	return value;
+}
+
 class GLObject
 {
 
@@ -392,6 +407,129 @@ public:
 	}
 
 	WorldObject* wobj = this;
+};
+
+class Camera : public WorldObject
+{
+public:
+	vec3 direction;
+
+	enum projectionMode { Perspective, Orthographic };
+	float FieldOfView = 90, FarClip = 1000, NearClip = 0.01f;
+	Camera::projectionMode ProjectionMode = Camera::projectionMode::Perspective;
+
+	mat4 view = mat4(1), projection = mat4(1);
+
+	static Camera* main;
+
+	Camera()
+	{
+		this->ProjectionMode = projectionMode::Perspective;
+		this->FieldOfView = 90;
+		this->FarClip = 1000;
+		this->NearClip = 0.01f;
+
+		this->view = mat4(1);
+		this->projection = mat4(1);
+	}
+
+	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
+	{
+		this->ProjectionMode = mode;
+
+		if (makeMain) main = this;
+		this->FieldOfView = fov;
+		this->FarClip = fc;
+		this->NearClip = nc;
+
+		this->view = mat4(1);
+		this->projection = mat4(1);
+	}
+
+	void DoInput(GLFWwindow* window, float deltaTime)
+	{
+		//UpdateDirections(true);
+		float speed = 0.9f;
+		float sens = 1;
+		double xpos, ypos;
+		glfwGetCursorPos(window, &xpos, &ypos);
+		glfwSetCursorPos(window, width / 2, height / 2);
+		vec2 center = vec2(1);
+		center.x = width / 2;
+		center.y = height / 2;
+
+		rotation.y += (center.x - xpos) * sens * deltaTime;
+		rotation.x += (center.y - ypos) * sens * deltaTime;
+
+		float limit = 80;
+		rotation.x = qclamp(rotation.x, -limit, limit);
+		
+		if (glfwGetKey(window, GLFW_KEY_W))
+		{
+			position += (direction * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_S))
+		{
+			position -= (direction * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_A))
+		{
+			position -= (right * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_D))
+		{
+			position += (right * speed) * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_E))
+		{
+			position.y += speed * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_Q))
+		{
+			position.y -= speed * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_C))
+		{
+			rotation.y += speed * deltaTime;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_Z))
+		{
+			rotation.y -= speed * deltaTime;
+		}
+	}
+
+	void UpdateCameraMatrices()
+	{
+		direction = vec3(
+			cos(rotation.x) * sin(rotation.y),
+			sin(rotation.x),
+			cos(rotation.x) * cos(rotation.y)
+		);
+
+		right = glm::vec3(
+			sin(rotation.y - 3.14f / 2.0f),
+			0,
+			cos(rotation.y - 3.14f / 2.0f)
+		);
+		
+		up = cross(right, direction);
+
+		view = lookAt(
+			position,
+			position + direction,
+			up
+		);
+
+		
+		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
+	}
 };
 
 class Shader : public GLObject
@@ -599,97 +737,6 @@ public:
 	void UnbindBuffer()
 	{
 		glBindBuffer(this->buffer, 0);
-	}
-};
-
-class Camera : public WorldObject
-{
-public:
-	enum projectionMode { Perspective, Orthographic };
-	float FieldOfView = 90, FarClip = 1000, NearClip = 0.01f;
-	Camera::projectionMode ProjectionMode = Camera::projectionMode::Perspective;
-
-	mat4 view = mat4(1), projection = mat4(1);
-
-	static Camera* main;
-
-	Camera()
-	{
-		this->ProjectionMode = projectionMode::Perspective;
-		this->FieldOfView = 90;
-		this->FarClip = 1000;
-		this->NearClip = 0.01f;
-
-		this->view = mat4(1);
-		this->projection = mat4(1);
-	}
-
-	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
-	{
-		this->ProjectionMode = mode;
-
-		if (makeMain) main = this;
-		this->FieldOfView = fov;
-		this->FarClip = fc;
-		this->NearClip = nc;
-
-		this->view = mat4(1);
-		this->projection = mat4(1);
-	}
-
-	void DoInput(GLFWwindow* window, float deltaTime)
-	{
-		UpdateDirections(true);
-		float speed = 0.9f;
-		if (glfwGetKey(window, GLFW_KEY_W))
-		{
-			position -= (forward * speed) * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_S))
-		{
-			position += (forward * speed) * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_A))
-		{
-			position -= (right * speed) * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_D))
-		{
-			position += (right * speed) * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_E))
-		{
-			position.y += speed * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_Q))
-		{
-			position.y -= speed * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_C))
-		{
-			rotation.y += speed * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_Z))
-		{
-			rotation.y -= speed * deltaTime;
-		}
-	}
-
-	void UpdateCameraMatrices()
-	{
-		view = rotate(view, rotation.x, vec3(0, 0, 1));
-		view = rotate(view, rotation.y, vec3(0, 1, 0));
-		view = rotate(view, rotation.z, vec3(1, 0, 0));
-
-		view = translate(view, -position);
-		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
 	}
 };
 
