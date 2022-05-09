@@ -285,6 +285,13 @@ GLFWwindow* glSetup()
 
 #define InitializeRenderer window = glSetup()
 
+inline void printvec3(vec3 op)
+{
+	cout << "(" << op.x << ", " << op.y << ", " << op.z << ")" << endl;
+}
+
+inline vec3 negatevec3_y(vec3 op) { vec3 ne = op; ne.y = -ne.y; return ne; }
+
 void qclamp(int* value, int lower, int upper)
 {
 	if (*value > upper) *value = upper;
@@ -448,7 +455,7 @@ public:
 		center.x = width / 2;
 		center.y = height / 2;
 
-		rotation.y += (center.x - xpos) * sens * deltaTime;
+		rotation.y -= (center.x - xpos) * sens * deltaTime;
 		rotation.x += (center.y - ypos) * sens * deltaTime;
 
 		float limit = 80;
@@ -482,16 +489,6 @@ public:
 		if (glfwGetKey(window, GLFW_KEY_Q))
 		{
 			position.y -= speed * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_C))
-		{
-			rotation.y += speed * deltaTime;
-		}
-
-		if (glfwGetKey(window, GLFW_KEY_Z))
-		{
-			rotation.y -= speed * deltaTime;
 		}
 	}
 

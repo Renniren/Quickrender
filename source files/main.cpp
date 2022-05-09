@@ -14,8 +14,10 @@ int main()
 	cam.FarClip = 9000.0f;
 	cam.NearClip = 0.01f;
 
-	cam.position = vec3(0, -3, 5);
-	
+	cam.position = vec3(0, 0, 5);
+	//cam.rotation.y = -180;
+	cam.UpdateCameraMatrices();
+
 	tri.Initialize(0);
 	tri.rotation = vec3(0, 0, 0);
 	tri.position = vec3(0, 1, 0);
@@ -65,6 +67,7 @@ int main()
 		{
 			tri2.rotation.y += speed * deltaTime;
 		}
+		if (glfwGetKey(window, GLFW_KEY_T)) printvec3(cam.position);
 
 		//mesh.Draw();
 		if (glfwGetKey(window, GLFW_KEY_T))
