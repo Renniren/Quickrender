@@ -339,6 +339,7 @@ public:
 
 	vec3 position = zerovec;
 	quat rotation = quat(0, 0, 0, 0);
+	mat4 rotationm = mat4(1.0f);
 	vec3 scale = zerovec;
 
 	mat4 model = mat4(1.0f);
