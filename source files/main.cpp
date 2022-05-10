@@ -44,6 +44,9 @@ int main()
 	   deltaTime = currentFrame - lastFrame;
 	   lastFrame = currentFrame;
 
+	   tri.UpdateDirections();
+	   tri2.UpdateDirections();
+
 		if (glfwGetKey(window, GLFW_KEY_R))
 		{
 			tri.rotation.z += speed * deltaTime;

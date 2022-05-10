@@ -362,7 +362,7 @@ public:
 
 	void UpdateDirections(bool cam = false)
 	{
-		if (cam)
+		/*if (cam)
 		{
 			forward.x = cos(rotation.x) * sin(-rotation.y);
 			forward.y = sin(rotation.z);
@@ -379,13 +379,31 @@ public:
 		right.y = 0;
 		right.z = sin(rotation.y);
 
+		up = cross(forward, right);*/
+
+		forward = vec3(
+			cos(rotation.x) * sin(rotation.y),
+			sin(rotation.x),
+			cos(rotation.x) * cos(rotation.y)
+		);
+
+		right = glm::vec3(
+			sin(rotation.y - 3.14f / 2.0f),
+			0,
+			cos(rotation.y - 3.14f / 2.0f)
+		);
+
 		up = cross(forward, right);
+
 	}
 
 	void UpdateMatrices()
 	{
 		UpdateDirections();
-		if (BelongsToCamera)
+		model = translate(model, position);
+		model = lookAt(position, position + forward, up);
+
+		/*if (BelongsToCamera)
 		{
 			model = translate(model, position);
 			model = rotate(model, rotation.x, right);
@@ -398,7 +416,7 @@ public:
 			model = rotate(model, rotation.x, right);
 			model = rotate(model, rotation.y, up);
 			model = rotate(model, rotation.z, forward);
-		}
+		}*/
 
 		model = glm::scale(model, scale);
 	}
