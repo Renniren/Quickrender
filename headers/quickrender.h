@@ -5,6 +5,7 @@
 
 #define QR_SETTINGS
 
+#define QR_DEBUG
 #define QR_USE_ASSIMP
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -28,7 +29,11 @@ const char* const WINDOW_NAME = "test";
 #include <assimp/scene.h>
 #include <glm/common.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
 
 #ifdef  QR_USE_ASSIMP
 #include <assimp/Importer.hpp>
@@ -248,8 +253,16 @@ void MouseCallback(GLFWwindow* window, double x, double y)
 
 }
 
+inline void QRDebugLog(const char* contents) 
+{ 
+#ifdef QR_DEBUG 
+cout << contents << endl; 
+#endif 
+}
+
 GLFWwindow* glSetup()
 {
+	QRDebugLog("Initializing OpenGL...");
 	stbi_set_flip_vertically_on_load(true);
 
 	// glfw: initialize and configure
@@ -280,6 +293,7 @@ GLFWwindow* glSetup()
 	glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
 	glViewport(0, 0, width, height);
 
+	QRDebugLog("OpenGL initialized.");
 	return window;
 }
 
@@ -350,6 +364,7 @@ class WorldObject : public GLObject
 public:
 
 	vec3 position = zerovec;
+	vec3 euler = zerovec;
 	quat rotation = quat(0, 0, 0, 0);
 	mat4 rotationm = mat4(1.0f);
 	vec3 scale = zerovec;
@@ -394,31 +409,27 @@ public:
 		);
 
 		up = cross(forward, right);
-
 	}
 
-	void UpdateMatrices()
+	mat4 UpdateMatrices()
 	{
 		UpdateDirections();
+		
+
+
+		/*model = rotate(model, rotation.x, vec3(1,0,0));
+		model = rotate(model, rotation.y, vec3(0, 1, 0));
+		model = rotate(model, rotation.z, vec3(0, 0, 1));
+		*/
+
+		
+		model *= lookAt(position, position + forward, up);
 		model = translate(model, position);
-		model = lookAt(position, position + forward, up);
-
-		/*if (BelongsToCamera)
-		{
-			model = translate(model, position);
-			model = rotate(model, rotation.x, right);
-			model = rotate(model, rotation.y, up);
-			model = rotate(model, rotation.z, forward);
-		}
-		else
-		{
-			model = translate(model, position);
-			model = rotate(model, rotation.x, right);
-			model = rotate(model, rotation.y, up);
-			model = rotate(model, rotation.z, forward);
-		}*/
-
-		model = glm::scale(model, scale);
+		model = glm::scale(model, this->scale);
+		/*model = lookAt(position,  position + forward, up);
+		model = glm::scale(model, this->scale);
+		*/
+		return model;
 	}
 
 	WorldObject* wobj = this;
@@ -747,12 +758,12 @@ public:
 void ApplyPerspective(Camera source, ShaderProgram pro, WorldObject obj)
 {
 	pro.UseProgram();
-	obj.UpdateMatrices();
+	
 	source.UpdateCameraMatrices();
 
 	pro.setMat4("projection", source.projection);
 	pro.setMat4("view", source.view);
-	pro.setMat4("model", obj.model);
+	pro.setMat4("model", obj.UpdateMatrices());
 }
 
 class Renderer

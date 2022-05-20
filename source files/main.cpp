@@ -64,7 +64,7 @@ int main()
 
 		if (glfwGetKey(window, GLFW_KEY_RIGHT))
 		{
-			tri2.rotation.y -= speed * deltaTime;
+			tri2.rotation.x -= speed * deltaTime;
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT))
 		{
