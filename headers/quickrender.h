@@ -2,13 +2,11 @@
 #define QUICKRENDER_MAIN_HEADER
 
 #ifndef QR_SETTINGS
-
 #define QR_SETTINGS
 
 #define QR_DEBUG
-#define QR_USE_ASSIMP
 #define STB_IMAGE_IMPLEMENTATION
-
+//#define QR_GENERATE_OBJECTS_IN_CONSTRUCTORS
 int width = 800, height = 600;
 const char* const WINDOW_NAME = "test";
 
@@ -43,7 +41,7 @@ const char* const WINDOW_NAME = "test";
 using namespace std;
 using namespace glm;
 
-char* GetWorkingDirectory()
+char* QRGetWorkingDirectory()
 {
 	char cCurrentPath[FILENAME_MAX];
 
@@ -56,15 +54,14 @@ char* GetWorkingDirectory()
 	return cCurrentPath;
 }
 
-const string TEXTURES_DIRECTORY = string(GetWorkingDirectory()) + string("\\textures\\");
-const string SHADERS_DIRECTORY = string(GetWorkingDirectory()) + string("\\shaders\\");
-const string MODELS_DIRECTORY = string(GetWorkingDirectory()) + string("\\models\\");
+const string TEXTURES_DIRECTORY = string(QRGetWorkingDirectory()) + string("\\textures\\");
+const string SHADERS_DIRECTORY = string(QRGetWorkingDirectory()) + string("\\shaders\\");
+const string MODELS_DIRECTORY = string(QRGetWorkingDirectory()) + string("\\models\\");
 
 
 #ifndef QUICKRENDER_MACROS
 #define QUICKRENDER_MACROS
 
-//this exists purely because I'm too lazy to type out certain shit
 #define panic __debugbreak();
 
 void PrintErrors()
@@ -107,8 +104,9 @@ void PrintErrors()
 
 }
 
+typedef unsigned int uint;
 
-#define uint unsigned int
+//#define uint unsigned int
 #define onevec vec3(1,1,1)
 #define zerovec vec3(0,0,0)
 #define cstring const char*
@@ -260,18 +258,36 @@ cout << contents << endl;
 #endif 
 }
 
-GLFWwindow* glSetup()
+struct QRContext
+{
+	GLFWwindow* window;
+	int width, height, version;
+	int MSAASamples;
+};
+
+QRContext* context;
+
+void QRSetMSAASamples(int level)
+{
+	context->MSAASamples = level;
+	glfwWindowHint(GLFW_SAMPLES, level);
+}
+
+GLFWwindow* glSetup(int version = 3)
 {
 	QRDebugLog("Initializing OpenGL...");
+	context = new QRContext();
 	stbi_set_flip_vertically_on_load(true);
 
 	// glfw: initialize and configure
    // ------------------------------
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_SAMPLES, 4);
+	context->MSAASamples = 4;
+
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
@@ -286,9 +302,10 @@ GLFWwindow* glSetup()
 		return nullptr;
 	}
 
+	context->width = width;
+	context->height = height;
 	glfwMakeContextCurrent(window);
 	gladLoadGL();
-
 
 	glfwSetFramebufferSizeCallback(window, ViewResizeCallback);
 	glViewport(0, 0, width, height);
@@ -365,7 +382,7 @@ public:
 
 	vec3 position = zerovec;
 	vec3 euler = zerovec;
-	quat rotation = quat(0, 0, 0, 0);
+	quat rotation = quat(0, 0, 0, 1);
 	mat4 rotationm = mat4(1.0f);
 	vec3 scale = zerovec;
 
@@ -397,8 +414,8 @@ public:
 		up = cross(forward, right);*/
 
 		forward = vec3(
-			cos(rotation.x) * sin(rotation.y),
-			sin(rotation.x),
+			cos(-rotation.x) * sin(-rotation.y),
+			sin(-rotation.x),
 			cos(rotation.x) * cos(rotation.y)
 		);
 
@@ -417,14 +434,16 @@ public:
 		
 
 
-		/*model = rotate(model, rotation.x, vec3(1,0,0));
-		model = rotate(model, rotation.y, vec3(0, 1, 0));
-		model = rotate(model, rotation.z, vec3(0, 0, 1));
-		*/
+		vec4 result(1,0,0,1);
+		mat4 transform(1.0f);
 
-		
-		model *= lookAt(position, position + forward, up);
+
+		//model *= lookAt(position, position + cross(up, right), up);
 		model = translate(model, position);
+		//model = lookAt(position, forward, up);
+		model = rotate(model, rotation.x, right);
+		model = rotate(model, rotation.y, up);
+		model = rotate(model, rotation.z, forward);
 		model = glm::scale(model, this->scale);
 		/*model = lookAt(position,  position + forward, up);
 		model = glm::scale(model, this->scale);
@@ -543,7 +562,16 @@ public:
 			up
 		);
 
-		projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
+		switch (ProjectionMode)
+		{
+		case Camera::projectionMode::Perspective:
+			projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
+			break;
+
+		case Camera::projectionMode::Orthographic:
+			
+			break;
+		}
 	}
 };
 
@@ -706,6 +734,7 @@ public:
 
 	int size = 0;
 	void* data = nullptr;
+	bool initialized = false;
 
 	BufferObject()
 	{
@@ -715,9 +744,8 @@ public:
 		data = nullptr;
 	}
 
-	void Generate(int size, GLenum buffer)
+	void Generate(GLenum buffer)
 	{
-		this->size = size;
 		this->buffer = buffer;
 		glGenBuffers(1, &this->id);
 	}
@@ -906,7 +934,7 @@ public:
 			VAO->Generate(1);
 			VAO->Bind();
 
-			VBO->Generate(sizeof(PRIMITIVE_CUBE), GL_ARRAY_BUFFER);
+			VBO->Generate(GL_ARRAY_BUFFER);
 			VBO->Bind(GL_ARRAY_BUFFER);
 			VBO->Copy(GL_ARRAY_BUFFER, PRIMITIVE_CUBE, sizeof(PRIMITIVE_CUBE), GL_STATIC_DRAW);
 
@@ -970,7 +998,7 @@ public:
 			VAO->Generate(1);
 			VAO->Bind();
 
-			VBO->Generate(sizeof(vertices), GL_ARRAY_BUFFER);
+			VBO->Generate(GL_ARRAY_BUFFER);
 			VBO->Bind(GL_ARRAY_BUFFER);
 			VBO->Copy(GL_ARRAY_BUFFER, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
@@ -1142,11 +1170,11 @@ public:
 		VAO.Bind();
 
 		VertexBuffer = BufferObject();
-		VertexBuffer.Generate(1, GL_ARRAY_BUFFER);
+		VertexBuffer.Generate(GL_ARRAY_BUFFER);
 		VertexBuffer.Copy(GL_ARRAY_BUFFER, &vertices[0], vertices.size() * sizeof(Vertex), GL_STATIC_DRAW);
 
 		ElementBuffer = BufferObject();
-		ElementBuffer.Generate(1, GL_ELEMENT_ARRAY_BUFFER);
+		ElementBuffer.Generate(GL_ELEMENT_ARRAY_BUFFER);
 		ElementBuffer.Copy(GL_ELEMENT_ARRAY_BUFFER, &indices[0], indices.size() * sizeof(uint), GL_STATIC_DRAW);
 
 		VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
@@ -1183,6 +1211,7 @@ public:
 
 vector<Mesh::Texture> ActiveMeshTextures = vector<Mesh::Texture>();
 
+#ifdef QR_USE_ASSIMP
 class Model : public WorldObject
 {
 public:
@@ -1374,6 +1403,6 @@ public:
 		}
 	}
 };
-
+#endif
 
 #endif

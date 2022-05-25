@@ -28,10 +28,10 @@ int main()
 	tri2.scale = onevec;
 	tri2.rotation = vec3(0, 0, 0);
 
-	Model mesh = Model((MODELS_DIRECTORY + "backpack\\backpack.obj").c_str(), (MODELS_DIRECTORY + "backpack\\").c_str());
+	/*Model mesh = Model((MODELS_DIRECTORY + "backpack\\backpack.obj").c_str(), (MODELS_DIRECTORY + "backpack\\").c_str());
 	mesh.scale = vec3(0.01f, 0.01f, 0.01f);
 	mesh.position = vec3(0.0f, 0.0f, -6);
-	
+	*/
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
 
