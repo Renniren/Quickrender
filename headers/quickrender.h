@@ -146,11 +146,12 @@ static bool glPrintErrors(const char* function, const char* file, int line)
 }
 
 
-#define STOP_ON_FAILURE(x) if ((!x)) __debugbreak();
+#define CATCH_ERROR(x) if ((!x)) __debugbreak();
 
 #define glCall(x)\
 	x;\
-	STOP_ON_FAILURE(glPrintErrors(#x, __FILE__, __LINE__));\
+	//assert(glPrintErrors(#x, __FILE__, __LINE__));\
+	CATCH_ERROR(glPrintErrors(#x, __FILE__, __LINE__));\
 
 #endif
 
@@ -221,6 +222,7 @@ float PRIMITIVE_CUBE[] = {
 	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
 	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
+
 float PRIMITIVE_TRIANGLE[] = {
 				-0.5f, -0.5f, 0.0f, // left  
 				0.5f, -0.5f, 0.0f, // right 
@@ -382,7 +384,7 @@ public:
 
 	vec3 position = zerovec;
 	vec3 euler = zerovec;
-	quat rotation = quat(0, 0, 0, 1);
+	quat rotation = quat(0, 0, 0, 0);
 	mat4 rotationm = mat4(1.0f);
 	vec3 scale = zerovec;
 
@@ -414,8 +416,8 @@ public:
 		up = cross(forward, right);*/
 
 		forward = vec3(
-			cos(-rotation.x) * sin(-rotation.y),
-			sin(-rotation.x),
+			cos(rotation.x) * sin(rotation.y),
+			sin(rotation.x),
 			cos(rotation.x) * cos(rotation.y)
 		);
 
@@ -439,11 +441,11 @@ public:
 
 
 		//model *= lookAt(position, position + cross(up, right), up);
+		//model = lookAt(position, position + forward, vec3(0,1,0));
 		model = translate(model, position);
-		//model = lookAt(position, forward, up);
-		model = rotate(model, rotation.x, right);
-		model = rotate(model, rotation.y, up);
-		model = rotate(model, rotation.z, forward);
+		model = rotate(model, rotation.x, vec3(1, 0, 0));
+		model = rotate(model, rotation.y, vec3(0, 1, 0));
+		model = rotate(model, rotation.z, vec3(0, 0, 1));
 		model = glm::scale(model, this->scale);
 		/*model = lookAt(position,  position + forward, up);
 		model = glm::scale(model, this->scale);
@@ -505,7 +507,7 @@ public:
 
 		rotation.y -= (center.x - xpos) * sens * deltaTime;
 		rotation.x += (center.y - ypos) * sens * deltaTime;
-
+		
 		float limit = 80;
 		rotation.x = qclamp(rotation.x, -limit, limit);
 		
@@ -686,7 +688,7 @@ public:
 	void setMat4(const string& name, const glm::mat4& mat) const
 	{
 		glUseProgram(id);
-		glUniformMatrix4fv(glGetUniformLocation(this->id, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(this->id, name.c_str()), 1, GL_FALSE, value_ptr(mat));
 	}
 
 	void Delete()

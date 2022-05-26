@@ -15,6 +15,7 @@ int main()
 	cam.NearClip = 0.01f;
 
 	cam.position = vec3(0, 0, 5);
+	cam.rotation.y = 180;
 	//cam.rotation.y = -180;
 	cam.UpdateCameraMatrices();
 
@@ -25,7 +26,7 @@ int main()
 
 	tri2.Initialize(0);
 	tri2.position = vec3(0, 3, 0);
-	tri2.scale = onevec;
+	tri2.scale = vec3(1,1,3);
 	tri2.rotation = vec3(0, 0, 0);
 
 	/*Model mesh = Model((MODELS_DIRECTORY + "backpack\\backpack.obj").c_str(), (MODELS_DIRECTORY + "backpack\\").c_str());
@@ -54,6 +55,7 @@ int main()
 
 		if (glfwGetKey(window, GLFW_KEY_UP))
 		{
+			
 			tri2.position += tri2.forward * speed * deltaTime;
 		}
 
