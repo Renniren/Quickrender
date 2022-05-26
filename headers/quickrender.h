@@ -38,9 +38,6 @@ const char* const WINDOW_NAME = "test";
 #include <assimp/postprocess.h>
 #endif
 
-using namespace std;
-using namespace glm;
-
 char* QRGetWorkingDirectory()
 {
 	char cCurrentPath[FILENAME_MAX];
@@ -54,9 +51,9 @@ char* QRGetWorkingDirectory()
 	return cCurrentPath;
 }
 
-const string TEXTURES_DIRECTORY = string(QRGetWorkingDirectory()) + string("\\textures\\");
-const string SHADERS_DIRECTORY = string(QRGetWorkingDirectory()) + string("\\shaders\\");
-const string MODELS_DIRECTORY = string(QRGetWorkingDirectory()) + string("\\models\\");
+const std::string TEXTURES_DIRECTORY = std::string(QRGetWorkingDirectory()) + std::string("\\textures\\");
+const std::string SHADERS_DIRECTORY = std::string(QRGetWorkingDirectory()) + std::string("\\shaders\\");
+const std::string MODELS_DIRECTORY = std::string(QRGetWorkingDirectory()) + std::string("\\models\\");
 
 
 #ifndef QUICKRENDER_MACROS
@@ -107,8 +104,8 @@ void PrintErrors()
 typedef unsigned int uint;
 
 //#define uint unsigned int
-#define onevec vec3(1,1,1)
-#define zerovec vec3(0,0,0)
+#define onevec glm::vec3(1,1,1)
+#define zerovec glm::vec3(0,0,0)
 #define cstring const char*
 
 static bool glPrintErrors(const char* function, const char* file, int line)
@@ -256,7 +253,7 @@ void MouseCallback(GLFWwindow* window, double x, double y)
 inline void QRDebugLog(const char* contents) 
 { 
 #ifdef QR_DEBUG 
-cout << contents << endl; 
+std::cout << contents << std::endl; 
 #endif 
 }
 
@@ -318,12 +315,12 @@ GLFWwindow* glSetup(int version = 3)
 
 #define InitializeRenderer window = glSetup()
 
-inline void printvec3(vec3 op)
+inline void printvec3(glm::vec3 op)
 {
-	cout << "(" << op.x << ", " << op.y << ", " << op.z << ")" << endl;
+	std::cout << "(" << op.x << ", " << op.y << ", " << op.z << ")" << std::endl;
 }
 
-inline vec3 negatevec3_y(vec3 op) { vec3 ne = op; ne.y = -ne.y; return ne; }
+inline glm::vec3 negatevec3_y(glm::vec3 op) { glm::vec3 ne = op; ne.y = -ne.y; return ne; }
 
 void qclamp(int* value, int lower, int upper)
 {
@@ -350,10 +347,10 @@ public:
 		objects.push_back(*this);
 	}
 
-	virtual string ToString()
+	virtual std::string ToString()
 	{
-		string result;
-		stringstream ss;
+		std::string result;
+		std::stringstream ss;
 		ss << id;
 		ss >> result;
 		return result;
@@ -365,7 +362,7 @@ public:
 	}
 
 	GLObject* globj = this;
-	static vector<GLObject> objects;
+	static std::vector<GLObject> objects;
 };
 
 void Cleanup()
@@ -382,15 +379,15 @@ class WorldObject : public GLObject
 {
 public:
 
-	vec3 position = zerovec;
-	vec3 euler = zerovec;
-	quat rotation = quat(0, 0, 0, 0);
-	mat4 rotationm = mat4(1.0f);
-	vec3 scale = zerovec;
+	glm::vec3 position = zerovec;
+	glm::vec3 euler = zerovec;
+	glm::quat rotation = glm::quat(0, 0, 0, 0);
+	glm::mat4 rotationm = glm::mat4(1.0f);
+	glm::vec3 scale = zerovec;
 
-	mat4 model = mat4(1.0f);
+	glm::mat4 model = glm::mat4(1.0f);
 
-	vec3 forward = zerovec, right = zerovec, up = zerovec;
+	glm::vec3 forward = zerovec, right = zerovec, up = zerovec;
 
 	bool BelongsToCamera = false;
 
@@ -415,7 +412,7 @@ public:
 
 		up = cross(forward, right);*/
 
-		forward = vec3(
+		forward = glm::vec3(
 			cos(rotation.x) * sin(rotation.y),
 			sin(rotation.x),
 			cos(rotation.x) * cos(rotation.y)
@@ -430,22 +427,22 @@ public:
 		up = cross(forward, right);
 	}
 
-	mat4 UpdateMatrices()
+	glm::mat4 UpdateMatrices()
 	{
 		UpdateDirections();
 		
 
 
-		vec4 result(1,0,0,1);
-		mat4 transform(1.0f);
+		glm::vec4 result(1,0,0,1);
+		glm::mat4 transform(1.0f);
 
 
 		//model *= lookAt(position, position + cross(up, right), up);
 		//model = lookAt(position, position + forward, vec3(0,1,0));
 		model = translate(model, position);
-		model = rotate(model, rotation.x, vec3(1, 0, 0));
-		model = rotate(model, rotation.y, vec3(0, 1, 0));
-		model = rotate(model, rotation.z, vec3(0, 0, 1));
+		model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
+		model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
+		model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
 		model = glm::scale(model, this->scale);
 		/*model = lookAt(position,  position + forward, up);
 		model = glm::scale(model, this->scale);
@@ -459,13 +456,13 @@ public:
 class Camera : public WorldObject
 {
 public:
-	vec3 direction;
+	glm::vec3 direction;
 
 	enum projectionMode { Perspective, Orthographic };
 	float FieldOfView = 90, FarClip = 1000, NearClip = 0.01f;
 	Camera::projectionMode ProjectionMode = Camera::projectionMode::Perspective;
 
-	mat4 view = mat4(1), projection = mat4(1);
+	glm::mat4 view = glm::mat4(1), projection = glm::mat4(1);
 
 	static Camera* main;
 
@@ -476,8 +473,8 @@ public:
 		this->FarClip = 1000;
 		this->NearClip = 0.01f;
 
-		this->view = mat4(1);
-		this->projection = mat4(1);
+		this->view = glm::mat4(1);
+		this->projection = glm::mat4(1);
 	}
 
 	Camera(Camera::projectionMode mode, bool makeMain, float fov = 90, float fc = 1000, float nc = 0.01f)
@@ -489,8 +486,8 @@ public:
 		this->FarClip = fc;
 		this->NearClip = nc;
 
-		this->view = mat4(1);
-		this->projection = mat4(1);
+		this->view = glm::mat4(1);
+		this->projection = glm::mat4(1);
 	}
 
 	void DoInput(GLFWwindow* window, float deltaTime)
@@ -501,7 +498,7 @@ public:
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
 		glfwSetCursorPos(window, width / 2, height / 2);
-		vec2 center = vec2(1);
+		glm::vec2 center = glm::vec2(1);
 		center.x = width / 2;
 		center.y = height / 2;
 
@@ -544,7 +541,7 @@ public:
 
 	void UpdateCameraMatrices()
 	{
-		direction = vec3(
+		direction = glm::vec3(
 			cos(rotation.x) * sin(rotation.y),
 			sin(rotation.x),
 			cos(rotation.x) * cos(rotation.y)
@@ -567,7 +564,7 @@ public:
 		switch (ProjectionMode)
 		{
 		case Camera::projectionMode::Perspective:
-			projection = perspective(radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
+			projection = glm::perspective(glm::radians(FieldOfView), float((width * 0.72) / (height * 0.72)), NearClip, FarClip);
 			break;
 
 		case Camera::projectionMode::Orthographic:
@@ -608,7 +605,7 @@ public:
 		glShaderSource(this->id, 1, &SourceCode, NULL);
 	}
 
-	void LinkCodeWithPath(string path)
+	void LinkCodeWithPath(std::string path)
 	{
 		// 1. retrieve the vertex/fragment source code from filePath
 		std::string vertexCode;
@@ -645,10 +642,10 @@ public:
 class ShaderProgram : public GLObject
 {
 public:
-	vector<Shader> linkedShaders;
+	std::vector<Shader> linkedShaders;
 	bool initialized;
 
-	void InitializeProgram(const vector<Shader>& shaders)
+	void InitializeProgram(const std::vector<Shader>& shaders)
 	{
 		if (initialized)
 		{
@@ -673,19 +670,19 @@ public:
 
 	//There should be more of these uniform setters. I write them as I go along, really.
 
-	void setFloat(const string& name, const float& number) const
+	void setFloat(const std::string& name, const float& number) const
 	{
 		glUseProgram(id);
 		glUniform1f(glGetUniformLocation(this->id, name.c_str()), number);
 	}
 
-	void setVec4(const string& name, const vec4& vect) const
+	void setVec4(const std::string& name, const glm::vec4& vect) const
 	{
 		glUseProgram(id);
 		glUniform4f(glGetUniformLocation(this->id, name.c_str()), (GLfloat)vect.x, (GLfloat)vect.y, (GLfloat)vect.z, (GLfloat)vect.w);
 	}
 
-	void setMat4(const string& name, const glm::mat4& mat) const
+	void setMat4(const std::string& name, const glm::mat4& mat) const
 	{
 		glUseProgram(id);
 		glUniformMatrix4fv(glGetUniformLocation(this->id, name.c_str()), 1, GL_FALSE, value_ptr(mat));
@@ -845,7 +842,7 @@ class Texture : public GLObject
 public:
 	void* texData;
 	int width, height, MipmapLevel;
-	vector<string> tags;
+	std::vector<std::string> tags;
 
 	GLenum target, format, imageFormat, datatype;
 
@@ -885,7 +882,7 @@ public:
 	}
 };
 
-Texture* LoadTexture(string path, GLenum target)
+Texture* LoadTexture(std::string path, GLenum target)
 {
 	Texture* tex = new Texture();
 	int height, width, numChannels;
@@ -895,14 +892,14 @@ Texture* LoadTexture(string path, GLenum target)
 
 	if (!data)
 	{
-		cout << "Failed to load texture with given path: " << path << endl;
+		std::cout << "Failed to load texture with given path: " << path << std::endl;
 		panic
 	}
 
 	if (numChannels == 4) format = GL_RGBA;
 
 	glCall(tex->GenerateTexture(target, 0, GL_RGB, width, height, format, GL_UNSIGNED_BYTE, data, true));
-	cout << numChannels << endl;
+	std::cout << numChannels << std::endl;
 	stbi_image_free(data);
 	return tex;
 }
@@ -922,16 +919,16 @@ public:
 		if (mode == 0)
 		{
 			VertShader.CreateShader();
-			cout << SHADERS_DIRECTORY + string("vertex.glsl") << endl;
-			VertShader.LinkCodeWithPath(SHADERS_DIRECTORY + string("vertexTextured.glsl"));
+			std::cout << SHADERS_DIRECTORY + std::string("vertex.glsl") << std::endl;
+			VertShader.LinkCodeWithPath(SHADERS_DIRECTORY + std::string("vertexTextured.glsl"));
 			VertShader.Compile();
 
 			FragShader.CreateShader();
-			FragShader.LinkCodeWithPath(SHADERS_DIRECTORY + string("fragmentTextured.glsl"));
+			FragShader.LinkCodeWithPath(SHADERS_DIRECTORY + std::string("fragmentTextured.glsl"));
 			FragShader.Compile();
 
 			shaderProgram.InitializeProgram({ VertShader, FragShader });
-			shaderProgram.setVec4("color", vec4(1));
+			shaderProgram.setVec4("color", glm::vec4(1));
 
 			VAO->Generate(1);
 			VAO->Bind();
@@ -940,7 +937,7 @@ public:
 			VBO->Bind(GL_ARRAY_BUFFER);
 			VBO->Copy(GL_ARRAY_BUFFER, PRIMITIVE_CUBE, sizeof(PRIMITIVE_CUBE), GL_STATIC_DRAW);
 
-			texture = LoadTexture(TEXTURES_DIRECTORY + string("dirt.jpg"), GL_TEXTURE_2D);
+			texture = LoadTexture(TEXTURES_DIRECTORY + std::string("dirt.jpg"), GL_TEXTURE_2D);
 
 			VertexAttribute(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float));
 			VertexAttribute(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (3 * sizeof(float)));
@@ -1022,7 +1019,7 @@ public:
 		if (mode == 1)
 		{
 			UpdateDirections();
-			shaderProgram.setVec4("color", vec4(0.4f, 0.9f, 0.1f, 0.5f));
+			shaderProgram.setVec4("color", glm::vec4(0.4f, 0.9f, 0.1f, 0.5f));
 			Renderer::Draw(*VAO, shaderProgram, *VBO, *wobj);
 		}
 	}
@@ -1072,8 +1069,8 @@ Color Color::transparent = { 1, 1, 1, 0 };
 
 Camera* Camera::main = nullptr;
 GLFWwindow* window;
-vector<GLObject> GLObject::objects = vector<GLObject>();
-vector<Texture> ActiveTextures = vector<Texture>();
+std::vector<GLObject> GLObject::objects = std::vector<GLObject>();
+std::vector<Texture> ActiveTextures = std::vector<Texture>();
 
 float deltaTime = 0, lastFrame = 0;
 
@@ -1091,9 +1088,9 @@ public:
 
 #endif
 
-unsigned int TextureFromFile(const char* path, const string& directory, bool gamma = true)
+unsigned int TextureFromFile(const char* path, const std::string& directory, bool gamma = true)
 {
-	string filename = string(path);
+	std::string filename = std::string(path);
 	filename = directory + '/' + filename;
 
 	unsigned int textureID;
@@ -1137,8 +1134,8 @@ public:
 	struct Vertex
 	{
 	public:
-		vec3 Position, Normal, Tangent, BiTangent;
-		vec2 TextureCoordinates;
+		glm::vec3 Position, Normal, Tangent, BiTangent;
+		glm::vec2 TextureCoordinates;
 
 		int BoneIDs[4], Weights[4];
 	};
@@ -1147,17 +1144,17 @@ public:
 	{
 	public:
 		uint id;
-		string type, path;
+		std::string type, path;
 	};
 	
 	BufferObject VertexBuffer, ElementBuffer;
 	VertexArrayObject VAO;
 
-	vector<Vertex> vertices;
-	vector<uint> indices;
-	vector<Texture> textures;
+	std::vector<Vertex> vertices;
+	std::vector<uint> indices;
+	std::vector<Texture> textures;
 
-	Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures)
+	Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures)
 	{
 		this->vertices = vertices;
 		this->indices = indices;
@@ -1192,8 +1189,8 @@ public:
 		for (uint i = 0; i < textures.size(); i++)
 		{
 			glActiveTexture(GL_TEXTURE0 + i); 
-			string number;
-			string name = textures[i].type;
+			std::string number;
+			std::string name = textures[i].type;
 			if (name == "texture_diffuse")
 				number = std::to_string(diffuse_number++);
 			else if (name == "texture_specular")
@@ -1211,7 +1208,7 @@ public:
 	}
 };
 
-vector<Mesh::Texture> ActiveMeshTextures = vector<Mesh::Texture>();
+std::vector<Mesh::Texture> ActiveMeshTextures = std::vector<Mesh::Texture>();
 
 #ifdef QR_USE_ASSIMP
 class Model : public WorldObject
