@@ -14,20 +14,20 @@ int main()
 	cam.FarClip = 9000.0f;
 	cam.NearClip = 0.01f;
 
-	cam.position = vec3(0, 0, 5);
+	cam.position = glm::vec3(0, 0, 5);
 	cam.rotation.y = 180;
 	//cam.rotation.y = -180;
 	cam.UpdateCameraMatrices();
 
 	tri.Initialize(0);
-	tri.rotation = vec3(0, 0, 0);
-	tri.position = vec3(0, 1, 0);
-	tri.scale = vec3(1, 1, 1);
+	tri.rotation = glm::vec3(0, 0, 0);
+	tri.position = glm::vec3(0, 1, 0);
+	tri.scale = glm::vec3(1, 1, 1);
 
 	tri2.Initialize(0);
-	tri2.position = vec3(0, 3, 0);
-	tri2.scale = vec3(1,1,3);
-	tri2.rotation = vec3(0, 0, 0);
+	//tri2.position = glm::vec3(0, 3, 0);
+	tri2.scale = glm::vec3(1,1,3);
+	tri2.rotation = glm::vec3(0, 0, 0);
 
 	/*Model mesh = Model((MODELS_DIRECTORY + "backpack\\backpack.obj").c_str(), (MODELS_DIRECTORY + "backpack\\").c_str());
 	mesh.scale = vec3(0.01f, 0.01f, 0.01f);
@@ -66,11 +66,11 @@ int main()
 
 		if (glfwGetKey(window, GLFW_KEY_RIGHT))
 		{
-			tri2.rotation.x -= speed * deltaTime;
+			tri2.euler.x -= speed * deltaTime;
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT))
 		{
-			tri2.rotation.y += speed * deltaTime;
+			tri2.euler.y += speed * deltaTime;
 		}
 		if (glfwGetKey(window, GLFW_KEY_T)) printvec3(cam.position);
 

@@ -424,11 +424,12 @@ public:
 			cos(rotation.y - 3.14f / 2.0f)
 		);
 
-		up = cross(forward, right);
+		up = normalize(cross(forward, right));
 	}
 
 	glm::mat4 UpdateMatrices()
 	{
+		
 		UpdateDirections();
 		
 
@@ -439,11 +440,18 @@ public:
 
 		//model *= lookAt(position, position + cross(up, right), up);
 		//model = lookAt(position, position + forward, vec3(0,1,0));
-		model = translate(model, position);
-		model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
+		model = glm::translate(model, position);
+		/*model = glm::rotate(model, rotation.x, glm::vec3(1, 0, 0));
 		model = glm::rotate(model, rotation.y, glm::vec3(0, 1, 0));
-		model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));
-		model = glm::scale(model, this->scale);
+		model = glm::rotate(model, rotation.z, glm::vec3(0, 0, 1));*/
+
+		rotation = glm::quat(euler);
+		
+		glm::mat4 mat_translation = glm::translate(model, position);
+		glm::mat4 mat_rotation = (glm::mat4)rotation;
+		glm::mat4 mat_scale = glm::scale(model, this->scale);
+		model = mat_translation * mat_rotation * mat_scale;
+
 		/*model = lookAt(position,  position + forward, up);
 		model = glm::scale(model, this->scale);
 		*/
